@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { Song, Playlist, PlayerMode, ActiveScreen, EqualizerSettings, LyricLine } from '../types/music';
 import { audioEngine } from '../services/audioEngine';
+import { apiUrl } from '../services/apiConfig';
 
 interface MusicContextType {
   songs: Song[];
@@ -157,7 +158,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ? `/api/trending?genre=${encodeURIComponent(targetGenre)}&page=1`
         : '/api/trending?page=1';
 
-      const res = await fetch(url);
+      const res = await fetch(apiUrl(url));
       if (res.ok) {
         const data = (await res.json()) as { results?: Song[]; hasMore?: boolean };
         if (data.results && data.results.length > 0) {
@@ -185,7 +186,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         ? `/api/trending?genre=${encodeURIComponent(targetGenre)}&page=${nextPage}`
         : `/api/trending?page=${nextPage}`;
 
-      const res = await fetch(url);
+      const res = await fetch(apiUrl(url));
       if (res.ok) {
         const data = (await res.json()) as { results?: Song[]; hasMore?: boolean };
         if (data.results && data.results.length > 0) {
@@ -198,9 +199,12 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         } else {
           setHasMoreTrending(false);
         }
+      } else {
+        setHasMoreTrending(false);
       }
     } catch (e) {
       console.warn('Error loading more songs:', e);
+      setHasMoreTrending(false);
     } finally {
       setIsLoadingMore(false);
     }
@@ -286,7 +290,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // Try to load real synced lyrics from LRCLIB for any song when played
   const fetchLyricsForSong = async (song: Song) => {
     try {
-      const res = await fetch(`/api/lyrics?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`);
+      const res = await fetch(apiUrl(`/api/lyrics?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`));
       if (res.ok) {
         const data = (await res.json()) as { lyrics?: LyricLine[] };
         if (data.lyrics && data.lyrics.length > 0) {
@@ -311,7 +315,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     fetchLyricsForSong(song);
 
     try {
-      await audioEngine.play(song.audioUrl);
+      const finalAudioUrl = song.audioUrl.startsWith('/api') ? apiUrl(song.audioUrl) : song.audioUrl;
+      await audioEngine.play(finalAudioUrl);
       setIsPlaying(true);
     } catch (e) {
       console.warn('Playback error or user gesture required:', e);

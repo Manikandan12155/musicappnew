@@ -1,4 +1,5 @@
 import { Song } from '../types/music';
+import { apiUrl } from './apiConfig';
 
 const DB_NAME = 'SpaceMusicOfflineDB';
 const DB_VERSION = 1;
@@ -37,7 +38,8 @@ class OfflineStorageService {
   public async downloadSong(song: Song): Promise<boolean> {
     try {
       // 1. Fetch audio stream as blob
-      const audioRes = await fetch(song.audioUrl);
+      const streamUrl = song.audioUrl.startsWith('/api') ? apiUrl(song.audioUrl) : song.audioUrl;
+      const audioRes = await fetch(streamUrl);
       if (!audioRes.ok) throw new Error('Failed to fetch audio stream');
       const audioBlob = await audioRes.blob();
 
@@ -65,7 +67,7 @@ class OfflineStorageService {
       });
 
       // 3. Trigger browser file download to local PC / Mobile storage
-      const downloadUrl = `/api/download/${song.id}?title=${encodeURIComponent(song.title)}`;
+      const downloadUrl = apiUrl(`/api/download/${song.id}?title=${encodeURIComponent(song.title)}`);
       const anchor = document.createElement('a');
       anchor.href = downloadUrl;
       anchor.download = `${song.title}.mp3`;

@@ -4,6 +4,7 @@ import { Search, X, Play, Heart, AlignLeft, Music, Loader2, Download, Check, Lis
 import { Song } from '../types/music';
 import { TrackListSkeleton } from './SkeletonLoader';
 import { offlineStorage } from '../services/offlineStorage';
+import { apiUrl } from '../services/apiConfig';
 
 export const SearchScreen: React.FC = () => {
   const {
@@ -60,15 +61,20 @@ export const SearchScreen: React.FC = () => {
         setIsSearchingOnline(true);
         setSearchPage(1);
         setHasMoreSearch(true);
-        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&page=1`);
+        const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(searchQuery)}&page=1`));
         if (res.ok) {
           const data = (await res.json()) as { results?: Song[]; hasMore?: boolean };
           if (data.results && data.results.length > 0) {
             setOnlineResults(data.results);
+          } else {
+            setHasMoreSearch(false);
           }
+        } else {
+          setHasMoreSearch(false);
         }
       } catch (e) {
         console.warn('Backend search unreachable, falling back to local catalog:', e);
+        setHasMoreSearch(false);
       } finally {
         setIsSearchingOnline(false);
       }
@@ -83,7 +89,7 @@ export const SearchScreen: React.FC = () => {
     try {
       setIsLoadingMoreSearch(true);
       const nextPage = searchPage + 1;
-      const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}&page=${nextPage}`);
+      const res = await fetch(apiUrl(`/api/search?q=${encodeURIComponent(searchQuery)}&page=${nextPage}`));
       if (res.ok) {
         const data = (await res.json()) as { results?: Song[]; hasMore?: boolean };
         if (data.results && data.results.length > 0) {
@@ -96,9 +102,12 @@ export const SearchScreen: React.FC = () => {
         } else {
           setHasMoreSearch(false);
         }
+      } else {
+        setHasMoreSearch(false);
       }
     } catch (e) {
       console.warn('Error loading more search tracks:', e);
+      setHasMoreSearch(false);
     } finally {
       setIsLoadingMoreSearch(false);
     }

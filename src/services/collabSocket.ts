@@ -66,9 +66,15 @@ class CollabSocketService {
 
     const urls: string[] = [];
     if (!isLocal) {
-      // In production (Render, custom domain, etc.), always connect directly to the active host /ws
-      if (host) urls.push(`${protocol}//${host}/ws`);
-      if (host) urls.push(`${protocol}//${host}/`);
+      // If frontend is accessed via Vercel, connect WebSocket to the live Render backend
+      if (hostname.includes('vercel.app')) {
+        urls.push('wss://space-music.onrender.com/ws');
+        urls.push('wss://space-music.onrender.com/');
+      } else {
+        // In production on Render or custom domain, connect to current host
+        if (host) urls.push(`${protocol}//${host}/ws`);
+        if (host) urls.push(`${protocol}//${host}/`);
+      }
     } else {
       // In local dev, prioritize direct port 5050, then proxy
       urls.push(`${protocol}//${hostname}:5050/ws`);
