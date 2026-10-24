@@ -62,16 +62,19 @@ class CollabSocketService {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const hostname = window.location.hostname || 'localhost';
     const host = window.location.host;
+    const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
 
-    // Prioritize direct port 5050 (fastest, no proxy delay), then Vite proxy /ws
     const urls: string[] = [];
-    if (hostname) {
+    if (!isLocal) {
+      // In production (Render, custom domain, etc.), always connect directly to the active host /ws
+      if (host) urls.push(`${protocol}//${host}/ws`);
+      if (host) urls.push(`${protocol}//${host}/`);
+    } else {
+      // In local dev, prioritize direct port 5050, then proxy
       urls.push(`${protocol}//${hostname}:5050/ws`);
-    }
-    if (host && host !== `${hostname}:5050`) {
-      urls.push(`${protocol}//${host}/ws`);
-    }
-    if (hostname) {
+      if (host && host !== `${hostname}:5050`) {
+        urls.push(`${protocol}//${host}/ws`);
+      }
       urls.push(`${protocol}//${hostname}:5050/`);
     }
     return urls;
