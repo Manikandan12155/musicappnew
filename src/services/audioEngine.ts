@@ -294,6 +294,17 @@ class AudioEngine {
    * Otherwise routes via native HTML5 Audio (offline blobs, custom URLs).
    */
   public async play(url?: string, videoId?: string): Promise<void> {
+    // If called with no arguments, resume current active player
+    if (!url && !videoId) {
+      if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+        this.ytPlayer.playVideo();
+        this.startTimeTicker();
+        this.audio.dispatchEvent(new Event('play'));
+        return;
+      }
+      return this.audio.play();
+    }
+
     this.fallbackAudioUrl = url || null;
 
     // Check if videoId or url has a YouTube 11-char ID

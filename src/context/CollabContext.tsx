@@ -51,10 +51,21 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   };
 
   const isRemoteActionRef = useRef<boolean>(false);
+  const lastSyncedSongIdRef = useRef<string | null>(null);
+  const lastSyncedPlayStateRef = useRef<boolean | null>(null);
+
+  // Keep latest values in refs to prevent listener teardown every 250ms
+  const currentSongRef = useRef(currentSong);
+  currentSongRef.current = currentSong;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+  const currentTimeRef = useRef(currentTime);
+  currentTimeRef.current = currentTime;
+
   const isInRoom = Boolean(room && room.code);
   const isHost = Boolean(room && collabSocket.myUserId && room.hostId === collabSocket.myUserId);
 
-  // Setup WebSocket Listeners
+  // Setup WebSocket Listeners (stable on mount)
   useEffect(() => {
     // Immediately sync current connection state
     setIsConnected(collabSocket.isConnected);
@@ -67,14 +78,14 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setIsConnected(connected);
     });
 
-    // Heartbeat check every 1.2s to guarantee React UI is never desynced from socket
+    // Heartbeat check every 2s
     const syncTimer = setInterval(() => {
       const active = collabSocket.isConnected;
       setIsConnected((prev) => (prev !== active ? active : prev));
       if (!active) {
         collabSocket.connect();
       }
-    }, 1200);
+    }, 2000);
 
     const unsubRoomUpdate = collabSocket.on('room_update', (roomData: CollabRoomState) => {
       setRoom(roomData);
@@ -82,24 +93,26 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     const unsubPlaybackSync = collabSocket.on('playback_sync', async (data: PlaybackSyncPayload) => {
       isRemoteActionRef.current = true;
+      lastSyncedSongIdRef.current = data.currentSong?.id || null;
+      lastSyncedPlayStateRef.current = data.isPlaying;
 
       try {
         if (data.currentSong) {
+          const activeSong = currentSongRef.current;
           // If different song, start playing it
-          if (!currentSong || currentSong.id !== data.currentSong.id) {
+          if (!activeSong || activeSong.id !== data.currentSong.id) {
             playSong(data.currentSong);
-          }
+          } else {
+            // Same song: sync seek and play state
+            if (data.currentTime !== undefined && Math.abs(currentTimeRef.current - data.currentTime) > 2) {
+              audioEngine.seek(data.currentTime);
+            }
 
-          // Seek to exact synchronized timestamp
-          if (data.currentTime !== undefined && Math.abs(currentTime - data.currentTime) > 1.5) {
-            audioEngine.seek(data.currentTime);
-          }
-
-          // Sync play/pause state
-          if (data.isPlaying && !isPlaying) {
-            await audioEngine.play();
-          } else if (!data.isPlaying && isPlaying) {
-            audioEngine.pause();
+            if (data.isPlaying && !isPlayingRef.current) {
+              await audioEngine.play();
+            } else if (!data.isPlaying && isPlayingRef.current) {
+              audioEngine.pause();
+            }
           }
         } else {
           audioEngine.pause();
@@ -109,7 +122,7 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       } finally {
         setTimeout(() => {
           isRemoteActionRef.current = false;
-        }, 300);
+        }, 1200);
       }
     });
 
@@ -118,7 +131,7 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       audioEngine.seek(data.currentTime);
       setTimeout(() => {
         isRemoteActionRef.current = false;
-      }, 300);
+      }, 800);
     });
 
     const unsubReaction = collabSocket.on('reaction_pulse', (rx: ReactionPayload) => {
@@ -145,15 +158,20 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       unsubReaction();
       unsubError();
     };
-  }, [currentSong, isPlaying, currentTime, playSong]);
+  }, [playSong]);
 
-  // Synchronize local playback changes with the room
+  // Synchronize local playback changes with the room (echo-loop protected)
   useEffect(() => {
     if (!isInRoom || isRemoteActionRef.current) return;
+    if (currentSong?.id === lastSyncedSongIdRef.current && isPlaying === lastSyncedPlayStateRef.current) {
+      return;
+    }
 
-    // Send playback update to room
+    lastSyncedSongIdRef.current = currentSong?.id || null;
+    lastSyncedPlayStateRef.current = isPlaying;
+
     collabSocket.syncPlay(currentSong, isPlaying, currentTime, queue);
-  }, [currentSong?.id, isPlaying]);
+  }, [currentSong?.id, isPlaying, isInRoom]);
 
   const createRoom = () => {
     collabSocket.createRoom(userName, currentSong, isPlaying, currentTime, queue);
