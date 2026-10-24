@@ -6,12 +6,14 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import play from 'play-dl';
-import { Ytdl, chooseFormat } from '@distube/ytdl-core';
+import { Ytdl, chooseFormat, Client } from '@distube/ytdl-core';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const ytdl = new Ytdl();
+const ytdl = new Ytdl({
+  clients: [Client.Tv, Client.WebEmbedded, Client.VisionOS, Client.Mweb]
+});
 const app = express();
 const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });

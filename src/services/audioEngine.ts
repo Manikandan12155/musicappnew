@@ -118,7 +118,17 @@ class AudioEngine {
       }
     }
 
-    return this.audio.play();
+    try {
+      return await this.audio.play();
+    } catch (playErr) {
+      if (this.audio.hasAttribute('crossorigin')) {
+        console.warn('Retrying audio playback without crossOrigin restriction...');
+        this.audio.removeAttribute('crossorigin');
+        this.audio.load();
+        return await this.audio.play();
+      }
+      throw playErr;
+    }
   }
 
   public pause(): void {
