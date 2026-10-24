@@ -1,6 +1,8 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import http from 'http';
+import path from 'path';
+import fs from 'fs';
 import { WebSocketServer, WebSocket } from 'ws';
 import play from 'play-dl';
 import { Ytdl, chooseFormat } from '@distube/ytdl-core';
@@ -633,6 +635,30 @@ wss.on('connection', (ws: WebSocket) => {
     }
   });
 });
+
+// 7. Serve Static Frontend in Production (Render / Railway / VPS Unified Host)
+const distCandidates = [
+  path.resolve(process.cwd(), 'dist'),
+  path.resolve(process.cwd(), '../dist'),
+  path.resolve(__dirname, '../../dist')
+];
+
+let activeDistPath: string | null = null;
+for (const cand of distCandidates) {
+  if (fs.existsSync(cand) && fs.existsSync(path.join(cand, 'index.html'))) {
+    activeDistPath = cand;
+    break;
+  }
+}
+
+if (activeDistPath) {
+  console.log(`🚀 Serving frontend static assets from: ${activeDistPath}`);
+  app.use(express.static(activeDistPath));
+  app.get('*', (req: Request, res: Response, next) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/ws')) return next();
+    res.sendFile(path.join(activeDistPath!, 'index.html'));
+  });
+}
 
 server.listen(PORT, '0.0.0.0', () => {
   console.log(`🌌 Space Music 100% KEYLESS Server & WebSocket running on http://0.0.0.0:${PORT}`);
