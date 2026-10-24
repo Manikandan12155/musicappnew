@@ -322,7 +322,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       const finalAudioUrl = song.audioUrl.startsWith('/api') ? apiUrl(song.audioUrl) : song.audioUrl;
-      await audioEngine.play(finalAudioUrl);
+      await audioEngine.play(finalAudioUrl, song.id);
       setIsPlaying(true);
     } catch (e) {
       console.warn('Playback error or user gesture required:', e);
