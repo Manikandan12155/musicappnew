@@ -1,0 +1,17 @@
+{
+  "version": 2,
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://space-music.onrender.com/api/:path*"
+    },
+    {
+      "source": "/ws/:path*",
+      "destination": "https://space-music.onrender.com/ws/:path*"
+    },
+    {
+      "source": "/((?!api/|ws/).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

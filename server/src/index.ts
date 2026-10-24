@@ -306,18 +306,39 @@ app.get('/api/stream/:videoId', async (req: Request, res: Response) => {
     res.header('Content-Type', 'audio/mp4');
     res.header('Accept-Ranges', 'bytes');
     res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', '*');
     res.header('Cache-Control', 'public, max-age=7200');
 
-    const stream = ytdl.download(videoUrl, {
-      filter: (f) => Boolean(f.hasAudio && !f.hasVideo),
+    let start = 0;
+    const rangeHeader = req.headers.range;
+    if (rangeHeader && rangeHeader.startsWith('bytes=')) {
+      const parts = rangeHeader.replace('bytes=', '').split('-');
+      start = parseInt(parts[0], 10) || 0;
+    }
+
+    const downloadOptions: any = {
+      filter: (f: any) => Boolean(f.hasAudio && !f.hasVideo),
       quality: 'highestaudio'
-    });
+    };
+
+    if (start > 0) {
+      downloadOptions.range = { start };
+      res.status(206);
+    }
+
+    const stream = ytdl.download(videoUrl, downloadOptions);
 
     stream.on('error', (err) => {
       console.error(`Stream error for ${videoId}:`, err.message);
       if (!res.headersSent) {
         res.status(500).send('Streaming error');
       }
+    });
+
+    req.on('close', () => {
+      try {
+        stream.destroy();
+      } catch {}
     });
 
     return stream.pipe(res);
