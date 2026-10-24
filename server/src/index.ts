@@ -3,9 +3,13 @@ import cors from 'cors';
 import http from 'http';
 import path from 'path';
 import fs from 'fs';
+import { fileURLToPath } from 'url';
 import { WebSocketServer, WebSocket } from 'ws';
 import play from 'play-dl';
 import { Ytdl, chooseFormat } from '@distube/ytdl-core';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const ytdl = new Ytdl();
 const app = express();
