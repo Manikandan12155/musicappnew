@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import QRCode from 'qrcode';
+import { QRScannerModal } from './QRScannerModal';
 import { useCollab } from '../context/CollabContext';
 import { useMusic } from '../context/MusicContext';
 import { collabSocket } from '../services/collabSocket';
@@ -19,7 +21,10 @@ import {
   Heart,
   Rocket,
   Zap,
-  Music2
+  Music2,
+  QrCode,
+  Camera,
+  Scan
 } from 'lucide-react';
 
 export const CollabRoomModal: React.FC = () => {
@@ -45,6 +50,30 @@ export const CollabRoomModal: React.FC = () => {
   const [inputCode, setInputCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
+  const [showQrCode, setShowQrCode] = useState(true);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+
+  // Generate high-resolution scannable QR Code for the room
+  useEffect(() => {
+    if (!room?.code) {
+      setQrDataUrl(null);
+      return;
+    }
+    const fullShareUrl = `${window.location.origin}/?room=${room.code}`;
+    QRCode.toDataURL(fullShareUrl, {
+      width: 240,
+      margin: 1,
+      color: {
+        dark: '#0f172a',
+        light: '#ffffff'
+      }
+    }).then((url) => {
+      setQrDataUrl(url);
+    }).catch((err) => {
+      console.warn('QR code gen error:', err);
+    });
+  }, [room?.code]);
 
   if (!isCollabModalOpen) return null;
 
@@ -174,6 +203,16 @@ export const CollabRoomModal: React.FC = () => {
                     Join Room
                   </button>
                 </div>
+
+                {/* Instant QR Code Scanner Button */}
+                <button
+                  type="button"
+                  className="collab-scan-btn-cta"
+                  onClick={() => setIsScannerOpen(true)}
+                >
+                  <Camera size={18} />
+                  <span>Scan Friend's QR Code</span>
+                </button>
               </div>
 
               <div className="collab-wifi-hint">
@@ -184,20 +223,51 @@ export const CollabRoomModal: React.FC = () => {
           ) : (
             /* --- STATE 2: IN ACTIVE ROOM --- */
             <div className="collab-active-room-view">
-              {/* Room Code Card */}
+              {/* Room Code Card with Passcode & QR Code */}
               <div className="collab-code-card">
-                <span className="code-label">ROOM PASSCODE</span>
+                <div className="code-card-header-bar">
+                  <span className="code-label">ROOM PASSCODE</span>
+                  <div className="code-card-actions-row">
+                    <button
+                      className={`qr-toggle-btn ${showQrCode ? 'active' : ''}`}
+                      onClick={() => setShowQrCode(!showQrCode)}
+                      title={showQrCode ? 'Hide QR Code' : 'Show QR Code'}
+                    >
+                      <QrCode size={14} />
+                      <span>{showQrCode ? 'Hide QR' : 'Show QR'}</span>
+                    </button>
+                    <button
+                      className="copy-code-btn"
+                      onClick={handleCopyCode}
+                      title="Copy 4-digit code"
+                    >
+                      {copied ? <Check size={16} className="text-green" /> : <Copy size={16} />}
+                      <span>{copied ? 'Copied!' : 'Copy Code'}</span>
+                    </button>
+                  </div>
+                </div>
+
                 <div className="code-display-wrap">
                   <span className="room-code-text">{room?.code}</span>
-                  <button
-                    className="copy-code-btn"
-                    onClick={handleCopyCode}
-                    title="Copy 4-digit code"
-                  >
-                    {copied ? <Check size={16} className="text-green" /> : <Copy size={16} />}
-                    <span>{copied ? 'Copied!' : 'Copy Code'}</span>
-                  </button>
                 </div>
+
+                {/* Scannable Room QR Code Showcase */}
+                {showQrCode && qrDataUrl && (
+                  <div className="collab-qr-showcase">
+                    <div className="collab-qr-frame">
+                      <img
+                        src={qrDataUrl}
+                        alt={`Space Jam Room ${room?.code} QR Code`}
+                        className="collab-qr-img"
+                      />
+                    </div>
+                    <div className="collab-qr-caption">
+                      <Scan size={14} className="text-neon-green" />
+                      <span>Scan with phone camera or Space Jam scanner to join!</span>
+                    </div>
+                  </div>
+                )}
+
                 <div className="share-url-row">
                   <span className="share-url-text">
                     WiFi Address: <strong>http://{window.location.host}</strong>
@@ -290,6 +360,15 @@ export const CollabRoomModal: React.FC = () => {
 
               {/* Leave Room Footer */}
               <div className="collab-room-footer">
+                <button
+                  type="button"
+                  className="collab-scan-other-btn"
+                  onClick={() => setIsScannerOpen(true)}
+                  title="Scan another room QR Code"
+                >
+                  <Camera size={15} />
+                  <span>Scan Another Room</span>
+                </button>
                 <button className="collab-btn-leave" onClick={leaveRoom}>
                   <LogOut size={16} />
                   <span>Leave Collab Room</span>
@@ -299,6 +378,16 @@ export const CollabRoomModal: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Built-in Live Camera QR Scanner Modal */}
+      <QRScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScanSuccess={(scannedCode) => {
+          setInputCode(scannedCode);
+          joinRoom(scannedCode);
+        }}
+      />
     </div>
   );
 };

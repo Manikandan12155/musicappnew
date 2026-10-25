@@ -204,6 +204,23 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setErrorMessage(null);
   };
 
+  // Auto-join room from URL query parameter (when scanned via phone camera QR)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const code = urlParams.get('room') || urlParams.get('jam');
+      if (code && code.trim().length >= 3) {
+        setIsCollabModalOpen(true);
+        const timer = setTimeout(() => {
+          collabSocket.connect();
+          joinRoom(code.trim().toUpperCase());
+        }, 700);
+        return () => clearTimeout(timer);
+      }
+    } catch {}
+  }, []);
+
   return (
     <CollabContext.Provider
       value={{
