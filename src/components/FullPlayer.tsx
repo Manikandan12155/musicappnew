@@ -62,19 +62,38 @@ export const FullPlayer: React.FC = () => {
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
   const [showTapRipple, setShowTapRipple] = useState<boolean>(false);
   const [isLightBg, setIsLightBg] = useState<boolean>(false);
-  const [isCanvasActive, setIsCanvasActive] = useState<boolean>(true);
-  const canvasVideoRef = useRef<HTMLVideoElement>(null);
+  const [isVideoMode, setIsVideoMode] = useState<boolean>(true);
+  const [isVideoLoaded, setIsVideoLoaded] = useState<boolean>(false);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
-  // Sync native canvas video loop with music playback (Option C)
+  // Sync YouTube video loop with music playback (Play when song plays, pause when song pauses)
   useEffect(() => {
-    if (canvasVideoRef.current) {
-      if (isPlaying) {
-        canvasVideoRef.current.play().catch(() => {});
-      } else {
-        canvasVideoRef.current.pause();
-      }
-    }
-  }, [isPlaying, isCanvasActive]);
+    if (!iframeRef.current?.contentWindow) return;
+    try {
+      const cmd = isPlaying ? 'playVideo' : 'pauseVideo';
+      iframeRef.current.contentWindow.postMessage(
+        JSON.stringify({ event: 'command', func: cmd, args: '' }),
+        '*'
+      );
+    } catch {}
+  }, [isPlaying]);
+
+  // Extract that song's specific YouTube videoId
+  const videoId = (currentSong.id && currentSong.id.length === 11)
+    ? currentSong.id
+    : (currentSong.audioUrl && currentSong.audioUrl.includes('/api/stream/'))
+    ? currentSong.audioUrl.split('/api/stream/')[1].split('?')[0]
+    : null;
+
+  // Zero Initial Loading Artifacts: Keep cover art shield on top until YouTube video starts playing silently
+  useEffect(() => {
+    setIsVideoLoaded(false);
+    if (!videoId) return;
+    const timer = setTimeout(() => {
+      setIsVideoLoaded(true);
+    }, 1300);
+    return () => clearTimeout(timer);
+  }, [videoId, isVideoMode]);
 
   // Dynamic Pic / Background Color Analysis for Automatic Contrast Updates
   useEffect(() => {
@@ -285,39 +304,39 @@ export const FullPlayer: React.FC = () => {
     }
   };
 
-  const videoId = (currentSong.id && currentSong.id.length === 11)
-    ? currentSong.id
-    : (currentSong.audioUrl && currentSong.audioUrl.includes('/api/stream/'))
-    ? currentSong.audioUrl.split('/api/stream/')[1].split('?')[0]
-    : null;
-
-    return (
-      <div className={`full-player-overlay mode-${playerMode} ${isLightBg ? 'theme-light-bg' : 'theme-dark-bg'}`}>
-        {/* Full-Bleed Native Canvas Video Loop (Option C: Seamless 10s Loop, Zero Glitch) / Picture Fallback */}
-        <div className="player-picture-background">
+  return (
+    <div className={`full-player-overlay mode-${playerMode} ${isLightBg ? 'theme-light-bg' : 'theme-dark-bg'}`}>
+        {/* Full-Bleed That Song's Real Video Loop (Zero Loading Glitch, Zero Controls, 0ms Delay) */}
+        <div className="player-video-background">
           <img
             src={currentSong.coverUrl}
             alt=""
             className="player-picture-ambient-glow"
           />
-          {isCanvasActive && (currentSong.canvasUrl || '/Vibe.mp4') ? (
-            <video
-              ref={canvasVideoRef}
-              src={currentSong.canvasUrl || '/Vibe.mp4'}
-              autoPlay
-              loop
-              muted
-              playsInline
-              className={`player-canvas-video-main ${isPlaying ? 'video-live' : ''}`}
-            />
-          ) : (
-            <img
-              src={currentSong.coverUrl}
-              alt={currentSong.title}
-              className={`player-picture-main ${isPlaying ? 'picture-live' : ''}`}
+
+          {isVideoMode && videoId && (
+            <iframe
+              ref={iframeRef}
+              className="player-video-iframe"
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1&enablejsapi=1`}
+              title={`${currentSong.title} Real Video Loop`}
+              allow="autoplay; encrypted-media"
             />
           )}
-          <div className="player-picture-vignette" />
+
+          {/* Seamless Cover Shield: Prevents YouTube's initial load controls from ever flashing */}
+          <img
+            src={currentSong.coverUrl}
+            alt={currentSong.title}
+            className={`player-picture-main ${isPlaying ? 'picture-live' : ''}`}
+            style={{
+              opacity: isVideoMode && videoId && isVideoLoaded ? 0 : 1,
+              transition: 'opacity 0.75s cubic-bezier(0.16, 1, 0.3, 1)',
+              pointerEvents: 'none'
+            }}
+          />
+
+          <div className="player-video-vignette" />
         </div>
 
       <div className="full-player-container">
@@ -339,10 +358,10 @@ export const FullPlayer: React.FC = () => {
 
           <div className="player-top-actions">
             <button
-              className={`player-icon-btn canvas-toggle-btn ${isCanvasActive ? 'active' : ''}`}
-              onClick={() => setIsCanvasActive(prev => !prev)}
-              title={isCanvasActive ? "Switch to Picture Mode" : "Switch to Video Canvas Loop"}
-              aria-label="Toggle Video Canvas Mode"
+              className={`player-icon-btn canvas-toggle-btn ${isVideoMode ? 'active' : ''}`}
+              onClick={() => setIsVideoMode(prev => !prev)}
+              title={isVideoMode ? "Switch to Song Picture" : "Switch to Song Video Loop"}
+              aria-label="Toggle Video Mode"
             >
               <Film size={20} />
             </button>
