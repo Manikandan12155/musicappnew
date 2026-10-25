@@ -5,7 +5,7 @@ import { useCollab } from '../context/CollabContext';
 import { collabSocket } from '../services/collabSocket';
 import {
   Users,
-  Wifi,
+  Radio,
   Copy,
   Check,
   X,
@@ -14,7 +14,9 @@ import {
   LogOut,
   QrCode,
   Camera,
-  Scan
+  Scan,
+  Dice5,
+  ArrowRight
 } from 'lucide-react';
 
 export const CollabRoomModal: React.FC = () => {
@@ -33,6 +35,7 @@ export const CollabRoomModal: React.FC = () => {
     clearError
   } = useCollab();
 
+  const [activeTab, setActiveTab] = useState<'create' | 'join'>('create');
   const [inputCode, setInputCode] = useState('');
   const [copied, setCopied] = useState(false);
   const [copiedUrl, setCopiedUrl] = useState(false);
@@ -86,7 +89,7 @@ export const CollabRoomModal: React.FC = () => {
         <div className="collab-modal-header">
           <div className="collab-header-left">
             <div className="collab-icon-glow">
-              <Wifi size={20} className="wifi-pulse-icon" />
+              <Radio size={20} className="wifi-pulse-icon" />
             </div>
             <div>
               <div className="collab-title-row">
@@ -124,78 +127,115 @@ export const CollabRoomModal: React.FC = () => {
         {/* Modal Body */}
         <div className="collab-modal-body">
           {!isInRoom ? (
-            /* --- STATE 1: NOT IN ROOM --- */
+            /* --- STATE 1: NOT IN ROOM (SUPER USER-FRIENDLY TABS) --- */
             <div className="collab-create-join-view">
-              <div className="collab-hero-card">
-                <div className="collab-hero-icon">
-                  <Users size={32} />
-                </div>
-                <h3>Listen Together with Friends</h3>
-                <p>
-                  Anyone with your 4-digit code or link can join this room to listen
-                  to synced music in real-time from anywhere in the world!
-                </p>
-              </div>
-
-              {/* Username Input */}
-              <div className="collab-form-group">
-                <label>Your Listener Name</label>
-                <input
-                  type="text"
-                  className="collab-input"
-                  placeholder="e.g. Vignesh, CosmicHost"
-                  value={userName}
-                  onChange={(e) => setUserName(e.target.value)}
-                  maxLength={20}
-                />
-              </div>
-
-              {/* Action Buttons */}
-              <div className="collab-actions-wrap">
-                <button
-                  className="collab-btn-primary"
-                  onClick={createRoom}
-                >
-                  <Sparkles size={18} />
-                  <span>{isConnected ? 'Create Cosmic Room' : 'Connect & Create Room'}</span>
-                </button>
-
-                <div className="collab-divider">
-                  <span>OR JOIN WITH CODE</span>
-                </div>
-
-                <div className="collab-join-row">
-                  <input
-                    type="text"
-                    className="collab-input code-input"
-                    placeholder="4-LETTER CODE"
-                    value={inputCode}
-                    onChange={(e) => setInputCode(e.target.value.toUpperCase())}
-                    maxLength={4}
-                  />
-                  <button
-                    className="collab-btn-secondary"
-                    onClick={() => joinRoom(inputCode)}
-                    disabled={inputCode.length < 3}
-                  >
-                    Join Room
-                  </button>
-                </div>
-
-                {/* Instant QR Code Scanner Button */}
+              {/* Segmented Control: Start Jam vs Join Jam */}
+              <div className="collab-tabs-nav">
                 <button
                   type="button"
-                  className="collab-scan-btn-cta"
-                  onClick={() => setIsScannerOpen(true)}
+                  className={`collab-tab-pill ${activeTab === 'create' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('create')}
                 >
-                  <Camera size={18} />
-                  <span>Scan Friend's QR Code</span>
+                  <Sparkles size={15} />
+                  <span>Host Jam</span>
+                </button>
+                <button
+                  type="button"
+                  className={`collab-tab-pill ${activeTab === 'join' ? 'active' : ''}`}
+                  onClick={() => setActiveTab('join')}
+                >
+                  <Users size={15} />
+                  <span>Join Jam</span>
                 </button>
               </div>
 
-              <div className="collab-wifi-hint">
-                <Sparkles size={14} />
-                <span>Listen together from anywhere — mobile data (4G/5G) or WiFi!</span>
+              {/* Compact Inline Listener Name Bar */}
+              <div className="collab-name-bar">
+                <div className="collab-name-left">
+                  <span className="collab-name-label">Listening as</span>
+                  <input
+                    type="text"
+                    className="collab-name-input"
+                    placeholder="Enter your name..."
+                    value={userName}
+                    onChange={(e) => setUserName(e.target.value)}
+                    maxLength={20}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="collab-random-btn"
+                  onClick={() => setUserName(`Cosmic-${Math.floor(100 + Math.random() * 900)}`)}
+                  title="Randomize Nickname"
+                >
+                  <Dice5 size={16} />
+                </button>
+              </div>
+
+              {activeTab === 'create' ? (
+                /* TAB 1: HOST / CREATE JAM */
+                <div className="collab-tab-pane">
+                  <div className="collab-card-preview">
+                    <div className="collab-pulse-avatar">
+                      <Radio size={28} className="wifi-pulse-icon" />
+                    </div>
+                    <h3>Be the Room Host</h3>
+                    <p>
+                      Start a live music room. Play any song and share your 4-digit code or QR with friends anywhere!
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="collab-btn-primary"
+                    onClick={createRoom}
+                  >
+                    <Sparkles size={18} />
+                    <span>{isConnected ? 'Create Cosmic Jam Room' : 'Connect & Start Jam'}</span>
+                  </button>
+                </div>
+              ) : (
+                /* TAB 2: JOIN FRIEND'S JAM */
+                <div className="collab-tab-pane">
+                  <div className="collab-join-card">
+                    <label className="collab-input-label">Enter 4-Letter Room Code</label>
+                    <div className="collab-code-input-group">
+                      <input
+                        type="text"
+                        className="collab-input code-input big-code"
+                        placeholder="CODE"
+                        value={inputCode}
+                        onChange={(e) => setInputCode(e.target.value.toUpperCase())}
+                        maxLength={4}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        className="collab-scan-icon-btn"
+                        onClick={() => setIsScannerOpen(true)}
+                        title="Scan Friend's QR Code"
+                      >
+                        <Camera size={18} />
+                        <span>Scan QR</span>
+                      </button>
+                    </div>
+
+                    <button
+                      type="button"
+                      className="collab-btn-primary"
+                      onClick={() => joinRoom(inputCode)}
+                      disabled={inputCode.length < 3}
+                    >
+                      <span>Join Room</span>
+                      <ArrowRight size={17} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="collab-footer-note">
+                <Sparkles size={13} className="text-neon-green" />
+                <span>Real-time music sync from anywhere — mobile data (4G/5G) or WiFi</span>
               </div>
             </div>
           ) : (
