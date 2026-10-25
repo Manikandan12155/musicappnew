@@ -214,7 +214,18 @@ async function fetchFromYouTubeMusicInnerTube(query: string, limit = 16) {
 
           const thumbs = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
           const rawThumb = thumbs[thumbs.length - 1]?.url;
-          const coverUrl = rawThumb || (videoId ? `https://i.ytimg.com/vi/${videoId}/hq720.jpg` : '');
+          let coverUrl = rawThumb || (videoId ? `https://i.ytimg.com/vi/${videoId}/hq720.jpg` : '/assets/space-music-logo.png');
+
+          // Auto-upgrade Google User Content thumbnails (w60/w120) to 1080p Ultra HD studio art
+          if (coverUrl && /googleusercontent\.com|ggpht\.com/i.test(coverUrl)) {
+            if (/=w\d+-h\d+/i.test(coverUrl)) {
+              coverUrl = coverUrl.replace(/=w\d+-h\d+[^=]*/i, '=w1080-h1080-l90-rj');
+            } else if (/=s\d+/i.test(coverUrl)) {
+              coverUrl = coverUrl.replace(/=s\d+[^=]*/i, '=s1200');
+            }
+          } else if (coverUrl && /ytimg\.com/i.test(coverUrl)) {
+            coverUrl = coverUrl.replace(/\/(?:hqdefault|mqdefault|default)\.jpg/i, '/hq720.jpg');
+          }
 
           if (videoId && title && !seen.has(videoId)) {
             seen.add(videoId);

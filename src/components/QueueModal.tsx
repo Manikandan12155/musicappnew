@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMusic } from '../context/MusicContext';
 import { X, Play, Trash2, ListMusic, Music2 } from 'lucide-react';
+import { upgradeHighQualityCover, DEFAULT_LOGO } from '../utils/imageQuality';
 
 export const QueueModal: React.FC = () => {
   const {
@@ -48,7 +49,14 @@ export const QueueModal: React.FC = () => {
             <span className="queue-section-label">NOW PLAYING</span>
             {currentSong ? (
               <div className="queue-track-card now-playing-highlight">
-                <img src={currentSong.coverUrl} alt={currentSong.title} className="queue-track-thumb" />
+                <img
+                  src={upgradeHighQualityCover(currentSong.coverUrl, currentSong.id)}
+                  alt={currentSong.title}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                  }}
+                  className="queue-track-thumb"
+                />
                 <div className="queue-track-meta">
                   <span className="queue-track-title">{currentSong.title}</span>
                   <span className="queue-track-artist">{currentSong.artist}</span>
@@ -90,7 +98,14 @@ export const QueueModal: React.FC = () => {
                       onClick={() => playSong(song, queue)}
                     >
                       <span className="queue-track-order">{i + 1}</span>
-                      <img src={song.coverUrl} alt={song.title} className="queue-track-thumb" />
+                      <img
+                        src={upgradeHighQualityCover(song.coverUrl, song.id)}
+                        alt={song.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                        }}
+                        className="queue-track-thumb"
+                      />
                       <div className="queue-track-meta">
                         <span className="queue-track-title">{song.title}</span>
                         <span className="queue-track-artist">{song.artist}</span>

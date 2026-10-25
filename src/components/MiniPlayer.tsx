@@ -1,6 +1,7 @@
 import React from 'react';
 import { useMusic } from '../context/MusicContext';
 import { Play, Pause, SkipForward, Heart, Maximize2, ListMusic } from 'lucide-react';
+import { upgradeHighQualityCover, DEFAULT_LOGO } from '../utils/imageQuality';
 
 export const MiniPlayer: React.FC = () => {
   const {
@@ -33,8 +34,11 @@ export const MiniPlayer: React.FC = () => {
       <div className="mini-player-content" onClick={() => setIsFullPlayerOpen(true)}>
         <div className="mini-artwork-wrap">
           <img
-            src={currentSong.coverUrl}
+            src={upgradeHighQualityCover(currentSong.coverUrl, currentSong.id)}
             alt={currentSong.title}
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+            }}
             className={`mini-artwork ${isPlaying ? 'spinning-artwork' : ''}`}
           />
           {isPlaying && <div className="mini-music-eq-waves">

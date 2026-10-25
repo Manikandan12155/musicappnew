@@ -5,6 +5,7 @@ import { Song } from '../types/music';
 import { TrackListSkeleton } from './SkeletonLoader';
 import { offlineStorage } from '../services/offlineStorage';
 import { apiUrl } from '../services/apiConfig';
+import { upgradeHighQualityCover, DEFAULT_LOGO } from '../utils/imageQuality';
 
 export const SearchScreen: React.FC = () => {
   const {
@@ -349,7 +350,14 @@ export const SearchScreen: React.FC = () => {
                   </div>
 
                   <div className="track-thumb-box">
-                    <img src={song.coverUrl} alt={song.title} className="track-thumb" />
+                    <img
+                      src={upgradeHighQualityCover(song.coverUrl, song.id)}
+                      alt={song.title}
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                      }}
+                      className="track-thumb"
+                    />
                     <button className="track-play-hover">
                       <Play size={16} fill="currentColor" />
                     </button>

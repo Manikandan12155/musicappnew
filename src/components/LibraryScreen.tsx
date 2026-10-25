@@ -3,6 +3,7 @@ import { useMusic } from '../context/MusicContext';
 import { Heart, Plus, ListMusic, Play, Trash2, Music, Download, Check, HardDrive } from 'lucide-react';
 import { Playlist, Song } from '../types/music';
 import { offlineStorage } from '../services/offlineStorage';
+import { upgradeHighQualityCover, DEFAULT_LOGO } from '../utils/imageQuality';
 
 export const LibraryScreen: React.FC = () => {
   const {
@@ -140,7 +141,14 @@ export const LibraryScreen: React.FC = () => {
                       onClick={() => playSong(song, likedSongs)}
                     >
                       <span className="row-num">{i + 1}</span>
-                      <img src={song.coverUrl} alt={song.title} className="row-cover" />
+                      <img
+                        src={upgradeHighQualityCover(song.coverUrl, song.id)}
+                        alt={song.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                        }}
+                        className="row-cover"
+                      />
                       <div className="row-info">
                         <span className="row-title">{song.title}</span>
                         <span className="row-artist">{song.artist}</span>
@@ -200,7 +208,14 @@ export const LibraryScreen: React.FC = () => {
                       onClick={() => playSong(song, offlineSongs)}
                     >
                       <span className="row-num">{i + 1}</span>
-                      <img src={song.coverUrl} alt={song.title} className="row-cover" />
+                      <img
+                        src={upgradeHighQualityCover(song.coverUrl, song.id)}
+                        alt={song.title}
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                        }}
+                        className="row-cover"
+                      />
                       <div className="row-info">
                         <span className="row-title">{song.title}</span>
                         <span className="row-artist">{song.artist}</span>

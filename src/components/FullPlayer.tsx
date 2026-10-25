@@ -27,6 +27,7 @@ import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
 import { WaveformTimeline } from './WaveformTimeline';
 import { audioEngine } from '../services/audioEngine';
+import { upgradeHighQualityCover, DEFAULT_LOGO } from '../utils/imageQuality';
 
 export const FullPlayer: React.FC = () => {
   const {
@@ -124,20 +125,52 @@ export const FullPlayer: React.FC = () => {
     img.onerror = () => setIsLightBg(false);
   }, [currentSong?.coverUrl]);
 
-  // Clean unletterboxed cover URL (replaces 4:3 hqdefault with 16:9 unpadded hq720)
-  const getCleanCover = (url?: string) => {
-    if (!url) return '';
-    if (url.includes('/hqdefault.jpg')) {
-      return url.replace('/hqdefault.jpg', '/hq720.jpg');
-    }
-    return url;
-  };
-
-  const [coverSrc, setCoverSrc] = useState<string>(getCleanCover(currentSong?.coverUrl));
+  // High-Resolution Cover State with Cascading Fallback & Default Logo
+  const [coverSrc, setCoverSrc] = useState<string>(() =>
+    upgradeHighQualityCover(currentSong?.coverUrl, currentSong?.id)
+  );
+  const [isDefaultLogo, setIsDefaultLogo] = useState<boolean>(
+    !currentSong?.coverUrl || currentSong.coverUrl === DEFAULT_LOGO
+  );
+  const fallbackAttemptsRef = useRef<number>(0);
 
   useEffect(() => {
-    setCoverSrc(getCleanCover(currentSong?.coverUrl));
-  }, [currentSong?.coverUrl]);
+    fallbackAttemptsRef.current = 0;
+    if (!currentSong?.coverUrl) {
+      setCoverSrc(DEFAULT_LOGO);
+      setIsDefaultLogo(true);
+    } else {
+      const hqUrl = upgradeHighQualityCover(currentSong.coverUrl, currentSong.id);
+      setCoverSrc(hqUrl);
+      setIsDefaultLogo(hqUrl === DEFAULT_LOGO);
+    }
+  }, [currentSong?.id, currentSong?.coverUrl]);
+
+  const handleImageError = () => {
+    fallbackAttemptsRef.current++;
+    // Fallback hierarchy for YouTube / Google thumbnails
+    if (coverSrc.includes('maxresdefault.jpg')) {
+      setCoverSrc(coverSrc.replace('maxresdefault.jpg', 'hq720.jpg'));
+    } else if (coverSrc.includes('hq720.jpg')) {
+      setCoverSrc(coverSrc.replace('hq720.jpg', 'sddefault.jpg'));
+    } else if (coverSrc.includes('sddefault.jpg')) {
+      setCoverSrc(coverSrc.replace('sddefault.jpg', 'hqdefault.jpg'));
+    } else if (coverSrc.includes('=w1080-h1080')) {
+      // If 1080p resize fails, try original raw coverUrl
+      if (currentSong?.coverUrl && currentSong.coverUrl !== coverSrc) {
+        setCoverSrc(currentSong.coverUrl);
+      } else {
+        setCoverSrc(DEFAULT_LOGO);
+        setIsDefaultLogo(true);
+      }
+    } else if (currentSong?.coverUrl && coverSrc !== currentSong.coverUrl && fallbackAttemptsRef.current < 2) {
+      setCoverSrc(currentSong.coverUrl);
+    } else {
+      // Fallback to official Space Music logo default
+      setCoverSrc(DEFAULT_LOGO);
+      setIsDefaultLogo(true);
+    }
+  };
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -295,26 +328,41 @@ export const FullPlayer: React.FC = () => {
 
     return (
       <div className={`full-player-overlay mode-${playerMode} ${isLightBg ? 'theme-light-bg' : 'theme-dark-bg'}`}>
-        {/* Cinematic Backdrop: Perfect Natural Picture Fit (Zero Extreme Zoom, Zero YouTube UI artifacts) */}
+        {/* Cinematic Backdrop: Ultra HD Studio Artwork & Liquid Default Logo */}
         <div className="player-picture-background">
           {/* Ambient blurred expansion to fill screen naturally */}
           <img
-            src={coverSrc || currentSong.coverUrl}
+            src={coverSrc || DEFAULT_LOGO}
             alt=""
             className="player-picture-ambient-glow"
+            onError={(e) => {
+              (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+            }}
           />
-          {/* Crisp, perfectly fitted main poster image - hides during subviews so text is 100% clear */}
+          {/* Crisp, perfectly fitted main poster image or official logo showcase */}
           <div className={`player-picture-framed-container ${activePlayerTab !== 'player' ? 'subview-hidden' : ''}`}>
-            <img
-              src={coverSrc || currentSong.coverUrl}
-              alt={currentSong.title}
-              onError={() => {
-                if (coverSrc.includes('/hq720.jpg') && currentSong.coverUrl) {
-                  setCoverSrc(currentSong.coverUrl);
-                }
-              }}
-              className={`player-picture-crisp-poster ${isPlaying ? 'picture-live' : ''}`}
-            />
+            {isDefaultLogo ? (
+              <div className="player-default-logo-showcase">
+                <div className="default-logo-badge">
+                  <img
+                    src={DEFAULT_LOGO}
+                    alt="Space Music Logo"
+                    className="default-logo-img"
+                  />
+                  <div className="default-logo-info">
+                    <span className="default-logo-brand">SPACE MUSIC</span>
+                    <span className="default-logo-tagline">Official Master Audio</span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <img
+                src={coverSrc}
+                alt={currentSong.title}
+                onError={handleImageError}
+                className={`player-picture-crisp-poster ${isPlaying ? 'picture-live' : ''}`}
+              />
+            )}
           </div>
           {/* Dynamic Contrast Scrim */}
           <div className="player-picture-vignette" />
@@ -607,7 +655,14 @@ export const FullPlayer: React.FC = () => {
                 )}
               </div>
               <div className="queue-now-playing-card">
-                <img src={currentSong.coverUrl} alt={currentSong.title} className="queue-thumb" />
+                <img
+                  src={currentSong.coverUrl || DEFAULT_LOGO}
+                  alt={currentSong.title}
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                  }}
+                  className="queue-thumb"
+                />
                 <div className="queue-song-info">
                   <span className="queue-song-title">{currentSong.title}</span>
                   <span className="queue-song-artist">{currentSong.artist}</span>
@@ -638,7 +693,14 @@ export const FullPlayer: React.FC = () => {
                           onClick={() => playSong(s, queue)}
                         >
                           <span className="queue-pos">{idx + 1}</span>
-                          <img src={s.coverUrl} alt={s.title} className="queue-thumb-small" />
+                          <img
+                            src={s.coverUrl || DEFAULT_LOGO}
+                            alt={s.title}
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = DEFAULT_LOGO;
+                            }}
+                            className="queue-thumb-small"
+                          />
                           <div className="queue-item-details">
                             <span className="queue-item-title">{s.title}</span>
                             <span className="queue-item-artist">{s.artist}</span>
