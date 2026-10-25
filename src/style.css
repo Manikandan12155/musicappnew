@@ -1292,11 +1292,12 @@ button, input {
   width: 130%;
   height: 130%;
   object-fit: cover;
-  filter: blur(55px) brightness(0.7) saturate(1.4);
+  filter: blur(45px) brightness(1.05) saturate(1.5);
   pointer-events: none;
+  opacity: 0.95;
 }
 
-/* Crisp, natural poster container - NOT over-zoomed, fits screen perfectly! */
+/* Crisp, natural poster container - centered and filling the visual gap */
 .player-picture-framed-container {
   position: absolute;
   inset: 0;
@@ -1306,6 +1307,12 @@ button, input {
   width: 100%;
   height: 100%;
   pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.player-picture-framed-container.subview-hidden {
+  opacity: 0;
+  pointer-events: none;
 }
 
 .player-picture-crisp-poster {
@@ -1314,14 +1321,14 @@ button, input {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain; /* Shows full image naturally, zero ugly zoom crop! */
-  object-position: center 26%; /* Anchored nicely in upper-middle stage */
-  filter: brightness(0.98) saturate(1.1);
+  object-position: center 36%; /* Beautifully centered to fill the stage gap naturally */
+  filter: brightness(1.02) saturate(1.1);
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), filter 0.4s ease;
   pointer-events: none;
 }
 
 .player-picture-crisp-poster.picture-live {
-  filter: brightness(1.02) saturate(1.15);
+  filter: brightness(1.05) saturate(1.18);
 }
 
 .player-picture-vignette {
@@ -1329,11 +1336,11 @@ button, input {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.48) 0%,
-    transparent 18%,
-    transparent 55%,
-    rgba(0, 0, 0, 0.62) 76%,
-    rgba(0, 0, 0, 0.9) 100%
+    rgba(0, 0, 0, 0.35) 0%,
+    transparent 15%,
+    transparent 62%,
+    rgba(0, 0, 0, 0.45) 84%,
+    rgba(0, 0, 0, 0.8) 100%
   );
   pointer-events: none;
   transition: background 0.4s ease;
@@ -1787,11 +1794,11 @@ button, input {
   transform: translateY(-50%) scale(0.92);
 }
 
-/* Open Cinematic Stage Spacer (Center card removed, video breathes completely!) */
+/* Open Cinematic Stage Spacer (Fills vertical gap naturally) */
 .open-cinematic-stage-spacer {
   position: relative;
   width: 100%;
-  height: min(40vh, 320px);
+  height: min(48vh, 420px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -6043,14 +6050,95 @@ input:checked + .slider-round:before {
   gap: 8px;
 }
 
-/* FullPlayer Queue Tab View */
+/* Subview Exit Header Strip with X Close button */
+.subview-header-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 8px 14px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-full);
+  animation: strip-slide-down 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes strip-slide-down {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.subview-title-tag {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  font-weight: 800;
+  color: var(--text-primary);
+  text-transform: uppercase;
+}
+
+.view-close-x-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 77, 77, 0.18);
+  border: 1px solid rgba(255, 77, 77, 0.45);
+  color: #ff8585;
+  font-size: 0.75rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 12px rgba(255, 77, 77, 0.2);
+}
+
+.view-close-x-btn:hover {
+  background: #ff4d4d;
+  color: #ffffff;
+  border-color: #ff4d4d;
+  transform: scale(1.06);
+  box-shadow: 0 6px 18px rgba(255, 77, 77, 0.45);
+}
+
+.view-close-x-btn:active {
+  transform: scale(0.94);
+}
+
+.theme-light-bg .view-close-x-btn {
+  background: rgba(255, 77, 77, 0.15);
+  border-color: rgba(255, 77, 77, 0.35);
+  color: #dc2626;
+}
+
+/* FullPlayer Queue Tab View (Frosted Glass Panel) */
 .player-queue-view {
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
-  padding: 10px 4px;
+  padding: 14px;
+  background: rgba(11, 16, 12, 0.88);
+  backdrop-filter: blur(30px) saturate(190%);
+  -webkit-backdrop-filter: blur(30px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+  animation: view-fade-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes view-fade-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.theme-light-bg .player-queue-view {
+  background: rgba(255, 255, 255, 0.92);
+  border-color: rgba(15, 23, 42, 0.14);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.15);
 }
 
 .queue-header-row {

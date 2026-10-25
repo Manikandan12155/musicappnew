@@ -20,7 +20,8 @@ import {
   ListMusic,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  X
 } from 'lucide-react';
 import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
@@ -121,6 +122,21 @@ export const FullPlayer: React.FC = () => {
       }
     };
     img.onerror = () => setIsLightBg(false);
+  }, [currentSong?.coverUrl]);
+
+  // Clean unletterboxed cover URL (replaces 4:3 hqdefault with 16:9 unpadded hq720)
+  const getCleanCover = (url?: string) => {
+    if (!url) return '';
+    if (url.includes('/hqdefault.jpg')) {
+      return url.replace('/hqdefault.jpg', '/hq720.jpg');
+    }
+    return url;
+  };
+
+  const [coverSrc, setCoverSrc] = useState<string>(getCleanCover(currentSong?.coverUrl));
+
+  useEffect(() => {
+    setCoverSrc(getCleanCover(currentSong?.coverUrl));
   }, [currentSong?.coverUrl]);
 
   // Swipeable gesture state for horizontal song navigation
@@ -283,15 +299,20 @@ export const FullPlayer: React.FC = () => {
         <div className="player-picture-background">
           {/* Ambient blurred expansion to fill screen naturally */}
           <img
-            src={currentSong.coverUrl}
+            src={coverSrc || currentSong.coverUrl}
             alt=""
             className="player-picture-ambient-glow"
           />
-          {/* Crisp, perfectly fitted main poster image - not over-zoomed */}
-          <div className="player-picture-framed-container">
+          {/* Crisp, perfectly fitted main poster image - hides during subviews so text is 100% clear */}
+          <div className={`player-picture-framed-container ${activePlayerTab !== 'player' ? 'subview-hidden' : ''}`}>
             <img
-              src={currentSong.coverUrl}
+              src={coverSrc || currentSong.coverUrl}
               alt={currentSong.title}
+              onError={() => {
+                if (coverSrc.includes('/hq720.jpg') && currentSong.coverUrl) {
+                  setCoverSrc(currentSong.coverUrl);
+                }
+              }}
               className={`player-picture-crisp-poster ${isPlaying ? 'picture-live' : ''}`}
             />
           </div>
@@ -312,7 +333,7 @@ export const FullPlayer: React.FC = () => {
           </button>
 
           <div className="player-top-suite">
-            {/* 4 View Tabs converted into Clean Separate Icons (No Text!) */}
+            {/* 4 View Tabs: Clicking active tab toggles back to player! */}
             <div className="player-views-cluster">
               <button
                 className={`player-icon-btn view-tab-btn ${activePlayerTab === 'player' ? 'active' : ''}`}
@@ -325,8 +346,8 @@ export const FullPlayer: React.FC = () => {
 
               <button
                 className={`player-icon-btn view-tab-btn ${activePlayerTab === 'lyrics' ? 'active' : ''}`}
-                onClick={() => setActivePlayerTab('lyrics')}
-                title="Synced Lyrics"
+                onClick={() => setActivePlayerTab(activePlayerTab === 'lyrics' ? 'player' : 'lyrics')}
+                title="Synced Lyrics (Click again to exit)"
                 aria-label="Synced Lyrics"
               >
                 <AlignLeft size={18} />
@@ -334,8 +355,8 @@ export const FullPlayer: React.FC = () => {
 
               <button
                 className={`player-icon-btn view-tab-btn ${activePlayerTab === 'dna' ? 'active' : ''}`}
-                onClick={() => setActivePlayerTab('dna')}
-                title="Music DNA"
+                onClick={() => setActivePlayerTab(activePlayerTab === 'dna' ? 'player' : 'dna')}
+                title="Music DNA (Click again to exit)"
                 aria-label="Music DNA"
               >
                 <Dna size={18} />
@@ -343,8 +364,8 @@ export const FullPlayer: React.FC = () => {
 
               <button
                 className={`player-icon-btn view-tab-btn ${activePlayerTab === 'queue' ? 'active' : ''}`}
-                onClick={() => setActivePlayerTab('queue')}
-                title={`Queue (${queue.length})`}
+                onClick={() => setActivePlayerTab(activePlayerTab === 'queue' ? 'player' : 'queue')}
+                title={`Queue (${queue.length}) (Click again to exit)`}
                 aria-label={`Queue (${queue.length})`}
               >
                 <ListMusic size={18} />
@@ -426,6 +447,25 @@ export const FullPlayer: React.FC = () => {
 
         {/* Content Body */}
         <div className="player-body">
+          {/* Subview Exit Header Strip with prominent X Close Button */}
+          {activePlayerTab !== 'player' && (
+            <div className="subview-header-strip">
+              <span className="subview-title-tag">
+                {activePlayerTab === 'lyrics' && '📜 SYNCED LYRICS'}
+                {activePlayerTab === 'dna' && '🧬 SONG DNA'}
+                {activePlayerTab === 'queue' && `📑 PLAYLIST QUEUE (${queue.length})`}
+              </span>
+              <button
+                className="view-close-x-btn"
+                onClick={() => setActivePlayerTab('player')}
+                title="Exit to Player View"
+                aria-label="Close and return to player"
+              >
+                <X size={18} />
+                <span>Exit</span>
+              </button>
+            </div>
+          )}
           {activePlayerTab === 'player' && (
             <div className="player-view-main">
               {/* Center-Focused Artwork Stage with Horizontal Swipe Support */}

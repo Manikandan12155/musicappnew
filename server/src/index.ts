@@ -214,7 +214,7 @@ async function fetchFromYouTubeMusicInnerTube(query: string, limit = 16) {
 
           const thumbs = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
           const rawThumb = thumbs[thumbs.length - 1]?.url;
-          const coverUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : (rawThumb || '');
+          const coverUrl = rawThumb || (videoId ? `https://i.ytimg.com/vi/${videoId}/hq720.jpg` : '');
 
           if (videoId && title && !seen.has(videoId)) {
             seen.add(videoId);
