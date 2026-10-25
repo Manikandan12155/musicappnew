@@ -21,8 +21,10 @@ import {
   Trash2,
   ChevronLeft,
   ChevronRight,
-  X
+  X,
+  Users
 } from 'lucide-react';
+import { useCollab } from '../context/CollabContext';
 import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
 import { WaveformTimeline } from './WaveformTimeline';
@@ -57,6 +59,8 @@ export const FullPlayer: React.FC = () => {
     removeFromQueue,
     clearQueue
   } = useMusic();
+
+  const { isInRoom, room, setIsCollabModalOpen } = useCollab();
 
   const [volume, setVolumeState] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
@@ -592,6 +596,17 @@ export const FullPlayer: React.FC = () => {
                   <p className="song-artist-main">{currentSong.artist}</p>
                 </div>
                 <div className="meta-actions-cluster">
+                  {/* Space Jam (Listen Together) Button */}
+                  <button
+                    className={`meta-action-btn jam-meta-btn ${isInRoom ? 'active-neon in-jam-room' : ''}`}
+                    onClick={() => setIsCollabModalOpen(true)}
+                    title={isInRoom ? `Space Jam Active: Room ${room?.code} (${room?.memberCount || 1} listening)` : 'Space Jam (Listen Together)'}
+                    aria-label="Space Jam"
+                  >
+                    <Users size={19} className={isInRoom ? 'collab-active-pulse' : ''} />
+                    {isInRoom && <span className="active-dot" />}
+                  </button>
+
                   <button
                     className={`meta-action-btn repeat-meta-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
                     onClick={toggleRepeat}
