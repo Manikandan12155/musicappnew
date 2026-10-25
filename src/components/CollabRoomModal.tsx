@@ -90,18 +90,18 @@ export const CollabRoomModal: React.FC = () => {
             </div>
             <div>
               <div className="collab-title-row">
-                <h2 className="collab-modal-title">WiFi Space Jam</h2>
+                <h2 className="collab-modal-title">Space Jam</h2>
                 <span
                   className={`status-badge ${isConnected ? 'online' : 'offline'}`}
                   onClick={() => !isConnected && collabSocket.connect()}
-                  title={isConnected ? 'Connected to WiFi Engine' : 'Click to reconnect'}
+                  title={isConnected ? 'Connected to Space Jam Engine' : 'Click to reconnect'}
                   style={{ cursor: isConnected ? 'default' : 'pointer' }}
                 >
                   <span className="dot" />
-                  {isConnected ? 'WiFi Sync Active' : 'Connecting... (tap to retry)'}
+                  {isConnected ? 'Live Sync Active' : 'Connecting... (tap to retry)'}
                 </span>
               </div>
-              <p className="collab-modal-sub">Real-Time Collaborative Listening on LAN</p>
+              <p className="collab-modal-sub">Real-Time Music Sync & Co-Listening Anywhere</p>
             </div>
           </div>
           <button
@@ -132,8 +132,8 @@ export const CollabRoomModal: React.FC = () => {
                 </div>
                 <h3>Listen Together with Friends</h3>
                 <p>
-                  Any device connected to your WiFi (mobile, tablet, laptop) can join
-                  this room to listen to synced music in real-time without ads!
+                  Anyone with your 4-digit code or link can join this room to listen
+                  to synced music in real-time from anywhere in the world!
                 </p>
               </div>
 
@@ -194,8 +194,8 @@ export const CollabRoomModal: React.FC = () => {
               </div>
 
               <div className="collab-wifi-hint">
-                <Wifi size={14} />
-                <span>Make sure both phones/laptops are on the same WiFi router!</span>
+                <Sparkles size={14} />
+                <span>Listen together from anywhere — mobile data (4G/5G) or WiFi!</span>
               </div>
             </div>
           ) : (
@@ -248,7 +248,7 @@ export const CollabRoomModal: React.FC = () => {
 
                 <div className="share-url-row">
                   <span className="share-url-text">
-                    WiFi Address: <strong>http://{window.location.host}</strong>
+                    Invite Link: <strong>{window.location.origin}</strong>
                   </span>
                   <button className="copy-link-btn" onClick={handleCopyLink}>
                     <Share2 size={13} />

@@ -64,24 +64,34 @@ class CollabSocketService {
     const host = window.location.host;
     const isLocal = hostname === 'localhost' || hostname === '127.0.0.1';
 
+    const envBackend = (import.meta as any).env?.VITE_BACKEND_URL || (import.meta as any).env?.VITE_API_URL;
+    let envWsUrl = '';
+    if (envBackend && typeof envBackend === 'string' && envBackend.trim()) {
+      const clean = envBackend.trim().replace(/^http/, 'ws').replace(/\/+$/, '');
+      envWsUrl = `${clean}/ws`;
+    }
+
     const urls: string[] = [];
+    if (envWsUrl) {
+      urls.push(envWsUrl);
+    }
+
     if (!isLocal) {
-      // If frontend is accessed via Vercel, connect WebSocket to the live Render backend
-      if (hostname.includes('vercel.app')) {
-        urls.push('wss://space-music.onrender.com/ws');
-        urls.push('wss://space-music.onrender.com/');
-      } else {
-        // In production on Render or custom domain, connect to current host
-        if (host) urls.push(`${protocol}//${host}/ws`);
-        if (host) urls.push(`${protocol}//${host}/`);
+      // Connect WebSocket to the live Render backend
+      urls.push('wss://space-music.onrender.com/ws');
+      urls.push('wss://space-music.onrender.com/');
+      if (host) {
+        urls.push(`${protocol}//${host}/ws`);
+        urls.push(`${protocol}//${host}/`);
       }
     } else {
-      // In local dev, prioritize direct port 5050, then proxy
+      // In local dev, prioritize direct port 5050, then proxy, and render backend as fallback
       urls.push(`${protocol}//${hostname}:5050/ws`);
       if (host && host !== `${hostname}:5050`) {
         urls.push(`${protocol}//${host}/ws`);
       }
       urls.push(`${protocol}//${hostname}:5050/`);
+      urls.push('wss://space-music.onrender.com/ws');
     }
     return urls;
   }

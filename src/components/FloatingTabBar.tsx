@@ -39,7 +39,7 @@ export const FloatingTabBar: React.FC = () => {
         <button
           className={`tab-item jam-tab-item ${isCollabModalOpen || isInRoom ? 'active in-jam-room' : ''}`}
           onClick={() => setIsCollabModalOpen(true)}
-          title={isInRoom ? `Active Space Jam Room: ${room?.code}` : 'WiFi Space Jam (Listen Together)'}
+          title={isInRoom ? `Active Space Jam Room: ${room?.code}` : 'Space Jam (Listen Together)'}
         >
           <div className="tab-icon-wrap">
             <Users size={20} className={isInRoom ? 'collab-active-pulse' : ''} />

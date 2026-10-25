@@ -66,7 +66,7 @@ export const HomeScreen: React.FC = () => {
 
           <p className="landing-subtext">
             Stream millions of high-resolution songs, sing with synced karaoke lyrics,
-            collab on WiFi with friends, and download tracks offline.
+            collab in real-time with friends, and download tracks offline.
           </p>
 
           {/* Interactive Search Bar -> Seamlessly switches to Explore */}
@@ -157,17 +157,17 @@ export const HomeScreen: React.FC = () => {
             </div>
           </div>
 
-          {/* Card 3: WiFi Space Jam */}
+          {/* Card 3: Space Jam */}
           <div
             className="landing-feature-card clickable-card"
             onClick={() => setActiveScreen('flow')}
           >
             <div className="feature-icon-box cosmic-purple">
-              <Wifi size={26} />
+              <Radio size={26} />
             </div>
-            <h3>WiFi Collaborative Jam</h3>
+            <h3>Space Jam (Live Sync)</h3>
             <p>
-              Connect devices on the same WiFi router. Listen together in real-time sync with live emoji reactions.
+              Listen together in real-time sync with friends from anywhere in the world.
             </p>
             <div className="card-action-link">
               <span>Join Space Jam</span>
