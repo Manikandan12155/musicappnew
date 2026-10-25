@@ -1336,11 +1336,12 @@ button, input {
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(0, 0, 0, 0.35) 0%,
-    transparent 15%,
+    rgba(0, 0, 0, 0.78) 0%,
+    rgba(0, 0, 0, 0.42) 14%,
+    transparent 28%,
     transparent 62%,
-    rgba(0, 0, 0, 0.45) 84%,
-    rgba(0, 0, 0, 0.8) 100%
+    rgba(0, 0, 0, 0.48) 84%,
+    rgba(0, 0, 0, 0.88) 100%
   );
   pointer-events: none;
   transition: background 0.4s ease;
@@ -1532,11 +1533,11 @@ button, input {
 }
 
 .player-icon-btn {
-  background: rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(20px) saturate(180%);
-  -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.18);
-  color: var(--text-primary);
+  background: rgba(14, 18, 16, 0.65); /* Dark frosted obsidian glass ensures 100% visibility on white/light backgrounds */
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #ffffff;
   width: clamp(34px, 4.8vw, 38px);
   height: clamp(34px, 4.8vw, 38px);
   border-radius: 50%;
@@ -1546,18 +1547,22 @@ button, input {
   cursor: pointer;
   position: relative;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.25);
   flex-shrink: 0;
 }
 
 .player-icon-btn.minimize-btn {
   width: clamp(36px, 5vw, 40px);
   height: clamp(36px, 5vw, 40px);
+  background: rgba(10, 14, 12, 0.65);
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #ffffff;
 }
 
 .player-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.18);
-  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(24, 32, 28, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
+  color: #ffffff;
   transform: scale(1.06);
 }
 
@@ -1565,11 +1570,18 @@ button, input {
   transform: scale(0.94);
 }
 
-/* Unified Top Suite */
+/* Unified Top Suite - Dark liquid capsule protects all buttons from white background glare */
 .player-top-suite {
   display: flex;
   align-items: center;
   gap: 6px;
+  background: rgba(8, 12, 10, 0.58);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-full);
+  padding: 4px 8px;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
 
@@ -1580,14 +1592,14 @@ button, input {
 }
 
 .player-icon-btn.view-tab-btn {
-  color: var(--text-secondary);
+  color: #e2e8f0; /* Crisp bright icon - zero wash out on white backgrounds */
 }
 
 .player-icon-btn.view-tab-btn.active {
-  background: rgba(57, 255, 20, 0.22);
+  background: rgba(57, 255, 20, 0.25);
   border-color: #39FF14;
   color: #39FF14;
-  box-shadow: 0 0 16px rgba(57, 255, 20, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 18px rgba(57, 255, 20, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
 }
 
 .theme-light-bg .player-icon-btn.view-tab-btn.active {
@@ -1760,17 +1772,17 @@ button, input {
   width: 44px;
   height: 44px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 14, 12, 0.65);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.28);
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.3);
   z-index: 15;
 }
 
@@ -2205,11 +2217,11 @@ button, input {
 }
 
 .meta-action-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 14, 12, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: var(--text-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #e5e7eb;
   width: clamp(38px, 5.5vw, 44px);
   height: clamp(38px, 5.5vw, 44px);
   border-radius: 50%;
@@ -2219,28 +2231,29 @@ button, input {
   cursor: pointer;
   position: relative;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
 }
 
 .meta-action-btn:hover {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(24, 32, 28, 0.85);
+  border-color: rgba(255, 255, 255, 0.45);
   color: #fff;
   transform: scale(1.06);
 }
 
 .meta-action-btn.active-neon {
   color: #39FF14;
-  border-color: rgba(57, 255, 20, 0.5);
-  background: rgba(57, 255, 20, 0.18);
-  box-shadow: 0 0 18px rgba(57, 255, 20, 0.45);
+  border-color: rgba(57, 255, 20, 0.6);
+  background: rgba(57, 255, 20, 0.25);
+  box-shadow: 0 0 18px rgba(57, 255, 20, 0.55);
 }
 
 .full-like-btn {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(10, 14, 12, 0.65);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  color: #ffffff;
   width: clamp(40px, 6vw, 48px);
   height: clamp(40px, 6vw, 48px);
   border-radius: 50%;
@@ -2250,7 +2263,7 @@ button, input {
   cursor: pointer;
   flex-shrink: 0;
   transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
 }
 
 .full-like-btn.liked {
