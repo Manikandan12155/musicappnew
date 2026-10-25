@@ -11,6 +11,8 @@ class AudioEngine {
   private bassFilter: BiquadFilterNode | null = null;
   private eqFilters: BiquadFilterNode[] = [];
   private pannerNode: StereoPannerNode | null = null;
+  private analyserNode: AnalyserNode | null = null;
+  private freqBuffer: Uint8Array = new Uint8Array(32);
   private isInitialized = false;
 
   // YouTube fallback engine
@@ -85,6 +87,13 @@ class AudioEngine {
         lastNode.connect(this.pannerNode);
         lastNode = this.pannerNode;
       }
+
+      this.analyserNode = this.audioCtx.createAnalyser();
+      this.analyserNode.fftSize = 64;
+      this.analyserNode.smoothingTimeConstant = 0.8;
+      this.freqBuffer = new Uint8Array(this.analyserNode.frequencyBinCount);
+      lastNode.connect(this.analyserNode);
+      lastNode = this.analyserNode;
 
       lastNode.connect(this.audioCtx.destination);
       this.isInitialized = true;
@@ -345,6 +354,56 @@ class AudioEngine {
   public getDuration(): number {
     if (this.isYtActive) return this.currentYtDuration || 0;
     return this.audio.duration || this.currentYtDuration || 0;
+  }
+
+  public getFrequencyData(): Uint8Array {
+    if (this.analyserNode) {
+      try {
+        this.analyserNode.getByteFrequencyData(this.freqBuffer);
+        let sum = 0;
+        for (let i = 0; i < this.freqBuffer.length; i++) sum += this.freqBuffer[i];
+        if (sum > 0) return this.freqBuffer;
+      } catch {}
+    }
+
+    const isPlaying = !this.audio.paused || this.isYtActive;
+    if (!isPlaying) {
+      this.freqBuffer.fill(0);
+      return this.freqBuffer;
+    }
+
+    // Dynamic fallback when audio is protected or streaming without CORS
+    const t = (this.isYtActive ? this.currentYtTime : this.audio.currentTime) * 4;
+    for (let i = 0; i < this.freqBuffer.length; i++) {
+      const harmonic = Math.sin(t * 1.5 + i * 0.4) * 0.5 + 0.5;
+      const decay = Math.max(0.2, 1 - i / this.freqBuffer.length);
+      const val = Math.floor((harmonic * 0.6 + 0.4) * decay * 210);
+      this.freqBuffer[i] = val;
+    }
+    return this.freqBuffer;
+  }
+
+  public getAudioMetrics(): { bass: number; mid: number; treble: number; energy: number; isPlaying: boolean } {
+    const isPlaying = !this.audio.paused || this.isYtActive;
+    if (!isPlaying) {
+      return { bass: 0, mid: 0, treble: 0, energy: 0, isPlaying: false };
+    }
+
+    const data = this.getFrequencyData();
+    let bassSum = 0;
+    let midSum = 0;
+    let trebleSum = 0;
+
+    for (let i = 0; i < 4; i++) bassSum += data[i] || 0;
+    for (let i = 4; i < 16; i++) midSum += data[i] || 0;
+    for (let i = 16; i < 32; i++) trebleSum += data[i] || 0;
+
+    const bass = bassSum / (4 * 255);
+    const mid = midSum / (12 * 255);
+    const treble = trebleSum / (16 * 255);
+    const energy = bass * 0.5 + mid * 0.35 + treble * 0.15;
+
+    return { bass, mid, treble, energy, isPlaying: true };
   }
 }
 
