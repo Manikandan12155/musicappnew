@@ -26,7 +26,6 @@ import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
 import { WaveformTimeline } from './WaveformTimeline';
 import { audioEngine } from '../services/audioEngine';
-import { AnimeCharacter3D } from './AnimeCharacter3D';
 
 export const FullPlayer: React.FC = () => {
   const {
@@ -60,7 +59,13 @@ export const FullPlayer: React.FC = () => {
   const [volume, setVolumeState] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
-  const [artViewMode, setArtViewMode] = useState<'anime' | 'vinyl' | 'glass'>('anime');
+  const [bgMode, setBgMode] = useState<'picture' | 'video'>(() => {
+    try {
+      return (localStorage.getItem('space_player_bg_mode') as 'picture' | 'video') || 'picture';
+    } catch {
+      return 'picture';
+    }
+  });
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -117,7 +122,7 @@ export const FullPlayer: React.FC = () => {
 
   // Swipe gesture handlers
   const handleStagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button, .art-mode-switch-btn, .anime-canvas-mount, .anime-character-3d-box')) return;
+    if ((e.target as HTMLElement).closest('button, .art-mode-switch-btn')) return;
     touchStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
     setIsDragging(true);
     setSlideTransition('none');
@@ -202,20 +207,37 @@ export const FullPlayer: React.FC = () => {
     }
   };
 
-  return (
-    <div className={`full-player-overlay mode-${playerMode}`}>
-      {/* Dynamic Ambient Mesh Backdrop */}
-      <div
-        className={`ambient-backdrop-blur ${isPlaying ? 'ambient-live' : ''}`}
-        style={{
-          backgroundImage: `radial-gradient(circle at 30% 20%, rgba(29, 185, 84, 0.45) 0%, transparent 60%),
-                            radial-gradient(circle at 80% 80%, rgba(57, 255, 20, 0.35) 0%, transparent 60%),
-                            url(${currentSong.coverUrl})`
-        }}
-      >
-        <div className="cosmic-canvas-aurora" />
-        <div className="cosmic-canvas-dust" />
-      </div>
+  const videoId = (currentSong.id && currentSong.id.length === 11)
+    ? currentSong.id
+    : (currentSong.audioUrl && currentSong.audioUrl.includes('/api/stream/'))
+    ? currentSong.audioUrl.split('/api/stream/')[1].split('?')[0]
+    : null;
+
+    return (
+      <div className={`full-player-overlay mode-${playerMode}`}>
+        {/* Dynamic Background: Song Picture OR Song Video running in background */}
+        {bgMode === 'video' && videoId ? (
+          <div className="player-video-background">
+            <iframe
+              className="player-video-iframe"
+              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1`}
+              title={`${currentSong.title} Video Background`}
+              allow="autoplay; encrypted-media"
+            />
+            <div className="player-video-vignette" />
+          </div>
+        ) : (
+          <div className="player-picture-background">
+            <img
+              src={currentSong.coverUrl}
+              alt={currentSong.title}
+              className={`player-picture-backdrop-img ${isPlaying ? 'picture-live' : ''}`}
+            />
+            <div className="cosmic-canvas-aurora" />
+            <div className="cosmic-canvas-dust" />
+            <div className="player-picture-vignette" />
+          </div>
+        )}
 
       <div className="full-player-container">
         {/* Top Header Bar */}
@@ -323,92 +345,42 @@ export const FullPlayer: React.FC = () => {
                     opacity: 1 - Math.min(0.4, Math.abs(dragOffset) / 300)
                   }}
                 >
-                  {artViewMode === 'anime' ? (
-                    <AnimeCharacter3D isPlaying={isPlaying} coverUrl={currentSong.coverUrl} />
-                  ) : artViewMode === 'vinyl' ? (
-                    <div className={`vinyl-turntable-box ${isPlaying ? 'active-playing' : 'is-paused'}`}>
-                      {/* Beat-Reactive Pulsing Rings in Neon Green */}
-                      <div
-                        className="vinyl-pulse-ring ring-1 pulsing"
-                        style={{
-                          transform: `scale(${beatScale})`,
-                          borderColor: isPlaying ? 'rgba(57, 255, 20, 0.45)' : 'rgba(255, 255, 255, 0.15)',
-                          boxShadow: isPlaying ? `0 0 25px rgba(57, 255, 20, ${0.25 * beatScale})` : 'none'
-                        }}
-                      />
-                      <div
-                        className="vinyl-pulse-ring ring-2 pulsing"
-                        style={{
-                          transform: `scale(${1 + (beatScale - 1) * 1.5})`
-                        }}
-                      />
-
-                      {/* Continuous spinning vinyl disc */}
-                      <div className={`vinyl-record-disc ${isPlaying ? 'spinning' : 'paused'}`}>
-                        <div className="vinyl-grooves-layer" />
-                        <div className="vinyl-conic-sheen" />
-                        <div className="vinyl-center-label">
-                          <img
-                            src={currentSong.coverUrl}
-                            alt={currentSong.title}
-                            className="vinyl-artwork-image"
-                          />
-                          <div className="vinyl-center-hole" />
-                        </div>
-                      </div>
-
-                      {/* Realistic Tonearm Needle */}
-                      <div className={`turntable-tonearm ${isPlaying ? 'arm-on-record' : 'arm-rest'}`}>
-                        <div className="tonearm-pivot" />
-                        <div className="tonearm-rod" />
-                        <div className="tonearm-cartridge" />
-                      </div>
-                    </div>
-                  ) : (
-                    <div
-                      className={`artwork-glass-card ${isPlaying ? 'artwork-floating' : ''}`}
-                      style={{
-                        boxShadow: isPlaying
-                          ? `0 20px 50px rgba(0, 0, 0, 0.8), 0 0 ${Math.round(25 * beatScale)}px rgba(57, 255, 20, 0.35)`
-                          : '0 20px 50px rgba(0, 0, 0, 0.7)'
-                      }}
-                    >
-                      <img
-                        src={currentSong.coverUrl}
-                        alt={currentSong.title}
-                        className="artwork-image"
-                      />
-                      <div className="artwork-sheen-overlay" />
-                    </div>
-                  )}
+                  {/* Song Cover Picture Glass Card */}
+                  <div
+                    className={`artwork-glass-card ${isPlaying ? 'artwork-floating' : ''}`}
+                    style={{
+                      boxShadow: isPlaying
+                        ? `0 20px 50px rgba(0, 0, 0, 0.8), 0 0 ${Math.round(25 * beatScale)}px rgba(57, 255, 20, 0.35)`
+                        : '0 20px 50px rgba(0, 0, 0, 0.7)'
+                    }}
+                  >
+                    <img
+                      src={currentSong.coverUrl}
+                      alt={currentSong.title}
+                      className="artwork-image"
+                    />
+                    <div className="artwork-sheen-overlay" />
+                  </div>
                 </div>
 
-                {/* Switch between 3D Anime Vibe, Vinyl Turntable & Glass Card view */}
+                {/* Switch between Song Picture & Song Video Background */}
                 <div className="stage-action-bar">
                   <button
                     className="art-mode-switch-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setArtViewMode((prev) => {
-                        if (prev === 'anime') return 'vinyl';
-                        if (prev === 'vinyl') return 'glass';
-                        return 'anime';
+                      setBgMode((prev) => {
+                        const next = prev === 'picture' ? 'video' : 'picture';
+                        try {
+                          localStorage.setItem('space_player_bg_mode', next);
+                        } catch {}
+                        return next;
                       });
                     }}
-                    title={
-                      artViewMode === 'anime'
-                        ? 'Switch to Vinyl Turntable'
-                        : artViewMode === 'vinyl'
-                        ? 'Switch to Glass Cover Art'
-                        : 'Switch to 3D Anime Character'
-                    }
+                    title={bgMode === 'picture' ? 'Switch to Song Video Background' : 'Switch to Song Picture Background'}
                   >
                     <span>
-                      {artViewMode === 'anime'
-                        ? '💃 3D Anime Vibe'
-                        : artViewMode === 'vinyl'
-                        ? '📀 Vinyl Turntable'
-                        : '🔲 Cover Card'}
+                      {bgMode === 'picture' ? '🖼️ Picture Background' : '🎬 Video Background'}
                     </span>
                   </button>
                   <span className="swipe-instruction-tag">Swipe left/right to change track</span>
