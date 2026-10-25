@@ -36,17 +36,20 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const [userName, setUserNameState] = useState<string>(() => {
     try {
-      return localStorage.getItem('space_collab_username') || `Cosmic-${Math.floor(100 + Math.random() * 900)}`;
+      return localStorage.getItem('space_collab_username') || '';
     } catch {
-      return `Cosmic-${Math.floor(100 + Math.random() * 900)}`;
+      return '';
     }
   });
 
   const setUserName = (name: string) => {
-    const trimmed = name.trim() || 'Cosmic Listener';
-    setUserNameState(trimmed);
+    setUserNameState(name);
     try {
-      localStorage.setItem('space_collab_username', trimmed);
+      if (name.trim()) {
+        localStorage.setItem('space_collab_username', name.trim());
+      } else {
+        localStorage.removeItem('space_collab_username');
+      }
     } catch {}
   };
 
@@ -174,15 +177,25 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [currentSong?.id, isPlaying, isInRoom]);
 
   const createRoom = () => {
-    collabSocket.createRoom(userName, currentSong, isPlaying, currentTime, queue);
+    const trimmed = userName.trim();
+    if (!trimmed) {
+      setErrorMessage('Please enter your name first!');
+      return;
+    }
+    collabSocket.createRoom(trimmed, currentSong, isPlaying, currentTime, queue);
   };
 
   const joinRoom = (code: string) => {
+    const trimmedName = userName.trim();
+    if (!trimmedName) {
+      setErrorMessage('Please enter your name first before joining!');
+      return;
+    }
     if (!code.trim()) {
       setErrorMessage('Please enter a 4-digit Room Code!');
       return;
     }
-    collabSocket.joinRoom(code.trim().toUpperCase(), userName);
+    collabSocket.joinRoom(code.trim().toUpperCase(), trimmedName);
   };
 
   const leaveRoom = () => {
@@ -212,11 +225,16 @@ export const CollabProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       const code = urlParams.get('room') || urlParams.get('jam');
       if (code && code.trim().length >= 3) {
         setIsCollabModalOpen(true);
-        const timer = setTimeout(() => {
-          collabSocket.connect();
-          joinRoom(code.trim().toUpperCase());
-        }, 700);
-        return () => clearTimeout(timer);
+        const savedName = localStorage.getItem('space_collab_username')?.trim();
+        if (savedName) {
+          const timer = setTimeout(() => {
+            collabSocket.connect();
+            collabSocket.joinRoom(code.trim().toUpperCase(), savedName);
+          }, 700);
+          return () => clearTimeout(timer);
+        } else {
+          setErrorMessage('Please enter your name to connect to this Jam session!');
+        }
       }
     } catch {}
   }, []);

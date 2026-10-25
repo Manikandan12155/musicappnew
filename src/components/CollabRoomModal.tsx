@@ -16,7 +16,8 @@ import {
   Camera,
   Scan,
   Dice5,
-  ArrowRight
+  ArrowRight,
+  Crown
 } from 'lucide-react';
 
 export const CollabRoomModal: React.FC = () => {
@@ -162,13 +163,15 @@ export const CollabRoomModal: React.FC = () => {
               </div>
 
               {/* Compact Inline Listener Name Bar */}
-              <div className="collab-name-bar">
+              <div className={`collab-name-bar ${!userName.trim() ? 'needs-name' : ''}`}>
                 <div className="collab-name-left">
-                  <span className="collab-name-label">Listening as</span>
+                  <span className="collab-name-label">
+                    Your Name <span style={{ color: '#ff5252' }}>*</span>
+                  </span>
                   <input
                     type="text"
                     className="collab-name-input"
-                    placeholder="Enter your name..."
+                    placeholder="Enter your name (Required)..."
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     maxLength={20}
@@ -330,6 +333,56 @@ export const CollabRoomModal: React.FC = () => {
                 </div>
               )}
 
+              {/* Connected Listeners List */}
+              <div className="collab-listeners-section">
+                <div className="collab-listeners-header">
+                  <div className="collab-listeners-header-left">
+                    <Users size={14} className="text-neon-green" />
+                    <span>Connected Listeners ({room?.members?.length || 1})</span>
+                  </div>
+                  <span className="collab-live-pulse-dot" />
+                </div>
+                <div className="collab-listeners-list">
+                  {room?.members && room.members.length > 0 ? (
+                    room.members.map((member) => (
+                      <div key={member.id} className="collab-listener-pill">
+                        <div className="collab-member-avatar">
+                          <span>{member.name ? member.name.charAt(0).toUpperCase() : '?'}</span>
+                        </div>
+                        <div className="collab-member-details">
+                          <span className="collab-member-name">
+                            {member.name} {member.id === collabSocket.myUserId ? '(You)' : ''}
+                          </span>
+                        </div>
+                        {member.isHost ? (
+                          <span className="collab-member-role host">
+                            <Crown size={11} />
+                            <span>Host</span>
+                          </span>
+                        ) : (
+                          <span className="collab-member-role listener">
+                            <span>Listener</span>
+                          </span>
+                        )}
+                      </div>
+                    ))
+                  ) : (
+                    <div className="collab-listener-pill">
+                      <div className="collab-member-avatar">
+                        <span>{userName ? userName.charAt(0).toUpperCase() : 'Y'}</span>
+                      </div>
+                      <div className="collab-member-details">
+                        <span className="collab-member-name">{userName || 'You'} (You)</span>
+                      </div>
+                      <span className="collab-member-role host">
+                        <Crown size={11} />
+                        <span>Host</span>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               {/* Leave Room Footer */}
               <div className="collab-room-footer">
                 <button
@@ -357,7 +410,20 @@ export const CollabRoomModal: React.FC = () => {
         onClose={() => setIsScannerOpen(false)}
         onScanSuccess={(scannedCode) => {
           setInputCode(scannedCode);
-          joinRoom(scannedCode);
+          setActiveTab('join');
+          setIsScannerOpen(false);
+          const currentName = userName.trim();
+          if (!currentName) {
+            const entered = window.prompt("Please enter your name to connect to this Jam session:")?.trim();
+            if (entered) {
+              setUserName(entered);
+              setTimeout(() => {
+                collabSocket.joinRoom(scannedCode.trim().toUpperCase(), entered);
+              }, 100);
+            }
+          } else {
+            joinRoom(scannedCode);
+          }
         }}
       />
     </div>
