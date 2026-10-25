@@ -1262,17 +1262,16 @@ button, input {
   min-width: 100%;
   height: 100%;
   min-height: 56.25vw;
-  transform: translate(-50%, -50%) scale(1.2);
+  transform: translate(-50%, -50%) scale(1.15);
   border: none;
-  filter: brightness(0.65) saturate(1.25) contrast(1.1);
+  filter: brightness(0.95) saturate(1.15); /* Significantly reduced dimming, bright and clear */
   pointer-events: none;
 }
 
 .player-video-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(8, 12, 10, 0.4) 0%, rgba(4, 6, 5, 0.9) 100%),
-              linear-gradient(to top, rgba(0, 0, 0, 0.92) 0%, rgba(0, 0, 0, 0.25) 50%, rgba(0, 0, 0, 0.75) 100%);
+  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, transparent 18%, transparent 72%, rgba(0, 0, 0, 0.65) 100%);
   pointer-events: none;
 }
 
@@ -1637,9 +1636,50 @@ button, input {
 
 /* Open Cinematic Stage Spacer (Center card removed, video breathes completely!) */
 .open-cinematic-stage-spacer {
+  position: relative;
   width: 100%;
   height: min(40vh, 320px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.center-tap-play-badge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.28);
+  color: #39FF14;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.5), 0 0 30px rgba(57, 255, 20, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
   pointer-events: none;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  animation: badge-breathe 3s ease-in-out infinite alternate;
+}
+
+@keyframes badge-breathe {
+  0% { transform: translate(-50%, -50%) scale(1); box-shadow: 0 16px 45px rgba(0, 0, 0, 0.5), 0 0 25px rgba(57, 255, 20, 0.3); }
+  100% { transform: translate(-50%, -50%) scale(1.06); box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6), 0 0 35px rgba(57, 255, 20, 0.5); }
+}
+
+.center-tap-play-badge.ripple-animate {
+  animation: badge-pop 0.65s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes badge-pop {
+  0% { transform: translate(-50%, -50%) scale(0.85); opacity: 0.5; }
+  50% { transform: translate(-50%, -50%) scale(1.18); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
 }
 
 .artwork-floating {
@@ -2171,23 +2211,23 @@ button, input {
 }
 
 /* ==========================================================================
-   FUTURISTIC LIQUID GLASS CONTROL CONSOLE (Centered & Balanced Layout)
+   FUTURISTIC LIQUID GLASS CONTROL CONSOLE (Compact Tool Capsule: Repeat & Volume)
    ========================================================================== */
-.futuristic-control-console {
+.futuristic-control-console.compact-pill {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  max-width: 380px;
-  margin: 12px auto 0 auto;
+  justify-content: space-around;
+  gap: 20px;
+  max-width: 170px;
+  margin: 10px auto 0 auto;
   width: 100%;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
-  border: 1px solid rgba(255, 255, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: var(--radius-full);
-  padding: 10px 32px;
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 25px rgba(57, 255, 20, 0.12);
+  padding: 8px 20px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.25);
   position: relative;
 }
 

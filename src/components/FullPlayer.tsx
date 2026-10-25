@@ -59,6 +59,7 @@ export const FullPlayer: React.FC = () => {
   const [volume, setVolumeState] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
+  const [showTapRipple, setShowTapRipple] = useState<boolean>(false);
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -138,6 +139,14 @@ export const FullPlayer: React.FC = () => {
 
     setIsDragging(false);
     touchStartRef.current = null;
+
+    // Tap in center detected! (little movement & quick touch) -> Play/Pause
+    if (Math.abs(dx) < 14 && dt < 320) {
+      togglePlay();
+      setShowTapRipple(true);
+      setTimeout(() => setShowTapRipple(false), 700);
+      return;
+    }
 
     if (dx < -55 || (dx < -25 && velocity > 0.35)) {
       // Swiped Left -> Next Song
@@ -353,7 +362,7 @@ export const FullPlayer: React.FC = () => {
                   <ChevronRight size={28} />
                 </button>
 
-                {/* Open Cinematic Stage: Center card removed so video shines through completely */}
+                {/* Open Cinematic Stage: Center card removed, tap anywhere in center to Play / Pause! */}
                 <div
                   className="artwork-swipe-transform"
                   style={{
@@ -362,7 +371,18 @@ export const FullPlayer: React.FC = () => {
                     opacity: 1 - Math.min(0.4, Math.abs(dragOffset) / 300)
                   }}
                 >
-                  <div className="open-cinematic-stage-spacer" />
+                  <div className="open-cinematic-stage-spacer">
+                    {/* Visual Tap Indicator for Play / Pause in Center */}
+                    {(!isPlaying || showTapRipple) && (
+                      <div className={`center-tap-play-badge ${showTapRipple ? 'ripple-animate' : ''}`}>
+                        {isPlaying ? (
+                          <Pause size={38} fill="currentColor" />
+                        ) : (
+                          <Play size={38} fill="currentColor" style={{ marginLeft: '4px' }} />
+                        )}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -407,8 +427,8 @@ export const FullPlayer: React.FC = () => {
                 isPlaying={isPlaying}
               />
 
-              {/* Futuristic Liquid Glass Control Console: Centered Play & Balanced Controls */}
-              <div className="futuristic-control-console centered-layout">
+              {/* Compact Liquid Glass Tool Capsule: Repeat & Volume (Play/Pause moved to Center Tap) */}
+              <div className="futuristic-control-console compact-pill">
                 <button
                   className={`console-btn sub-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
                   onClick={toggleRepeat}
@@ -417,20 +437,6 @@ export const FullPlayer: React.FC = () => {
                 >
                   {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
                   {repeatMode !== 'none' && <span className="active-dot" />}
-                </button>
-
-                <button
-                  className={`console-btn primary-holo-play ${isPlaying ? 'is-playing' : ''}`}
-                  onClick={togglePlay}
-                  title={isPlaying ? 'Pause' : 'Play'}
-                  aria-label={isPlaying ? 'Pause' : 'Play'}
-                >
-                  <div className="holo-ripple-ring" />
-                  {isPlaying ? (
-                    <Pause size={30} fill="currentColor" />
-                  ) : (
-                    <Play size={30} fill="currentColor" style={{ marginLeft: '3px' }} />
-                  )}
                 </button>
 
                 {/* Smart Volume Alternative: Compact Trigger with Expandable Neon Popover */}
