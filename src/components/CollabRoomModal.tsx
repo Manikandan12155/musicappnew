@@ -74,8 +74,20 @@ export const CollabRoomModal: React.FC = () => {
     }
   };
 
-  const handleCopyLink = () => {
+  const handleShareInvite = async () => {
     const fullUrl = `${window.location.origin}/?room=${room?.code || ''}`;
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Join my Space Jam Room',
+          text: `Join my live music room on Echo Music! Passcode: ${room?.code || ''}`,
+          url: fullUrl
+        });
+        return;
+      } catch (err) {
+        // Fallback to clipboard if share cancelled
+      }
+    }
     navigator.clipboard.writeText(fullUrl);
     setCopiedUrl(true);
     setTimeout(() => setCopiedUrl(false), 2000);
@@ -239,63 +251,84 @@ export const CollabRoomModal: React.FC = () => {
               </div>
             </div>
           ) : (
-            /* --- STATE 2: IN ACTIVE ROOM --- */
+            /* --- STATE 2: IN ACTIVE ROOM (PREMIUM MODERN JAM VIEW) --- */
             <div className="collab-active-room-view">
-              {/* Room Code Card with Passcode & QR Code */}
-              <div className="collab-code-card">
-                <div className="code-card-header-bar">
-                  <span className="code-label">ROOM PASSCODE</span>
-                  <div className="code-card-actions-row">
-                    <button
-                      className={`qr-toggle-btn ${showQrCode ? 'active' : ''}`}
-                      onClick={() => setShowQrCode(!showQrCode)}
-                      title={showQrCode ? 'Hide QR Code' : 'Show QR Code'}
-                    >
-                      <QrCode size={14} />
-                      <span>{showQrCode ? 'Hide QR' : 'Show QR'}</span>
-                    </button>
-                    <button
-                      className="copy-code-btn"
-                      onClick={handleCopyCode}
-                      title="Copy 4-digit code"
-                    >
-                      {copied ? <Check size={16} className="text-green" /> : <Copy size={16} />}
-                      <span>{copied ? 'Copied!' : 'Copy Code'}</span>
-                    </button>
-                  </div>
+              {/* Live Session Status Bar */}
+              <div className="collab-session-status-bar">
+                <div className="collab-live-badge">
+                  <span className="live-dot" />
+                  <span>Jam Session Active</span>
                 </div>
-
-                <div className="code-display-wrap">
-                  <span className="room-code-text">{room?.code}</span>
-                </div>
-
-                {/* Scannable Room QR Code Showcase */}
-                {showQrCode && qrDataUrl && (
-                  <div className="collab-qr-showcase">
-                    <div className="collab-qr-frame">
-                      <img
-                        src={qrDataUrl}
-                        alt={`Space Jam Room ${room?.code} QR Code`}
-                        className="collab-qr-img"
-                      />
-                    </div>
-                    <div className="collab-qr-caption">
-                      <Scan size={14} className="text-neon-green" />
-                      <span>Scan with phone camera or Space Jam scanner to join!</span>
-                    </div>
-                  </div>
-                )}
-
-                <div className="share-url-row">
-                  <span className="share-url-text">
-                    Invite Link: <strong>{window.location.origin}</strong>
-                  </span>
-                  <button className="copy-link-btn" onClick={handleCopyLink}>
-                    <Share2 size={13} />
-                    <span>{copiedUrl ? 'Link Copied!' : 'Copy Link'}</span>
-                  </button>
-                </div>
+                <span className="collab-session-user">
+                  Host: <strong>{userName}</strong>
+                </span>
               </div>
+
+              {/* Passcode Hero Card */}
+              <div className="collab-session-card">
+                <span className="collab-session-card-label">ROOM PASSCODE</span>
+
+                {/* 4 Neon Digit Tiles */}
+                <div
+                  className="collab-passcode-tiles"
+                  onClick={handleCopyCode}
+                  title="Click to copy passcode"
+                >
+                  {(room?.code || '••••').split('').map((char, idx) => (
+                    <div key={idx} className="passcode-digit-tile">
+                      <span>{char}</span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Quick 1-Tap Copy Chip */}
+                <button
+                  type="button"
+                  className="collab-copy-chip"
+                  onClick={handleCopyCode}
+                >
+                  {copied ? <Check size={14} className="text-neon-green" /> : <Copy size={14} />}
+                  <span>{copied ? 'Passcode Copied!' : 'Tap Code to Copy'}</span>
+                </button>
+              </div>
+
+              {/* Share & QR Code Actions */}
+              <div className="collab-active-actions-row">
+                <button
+                  type="button"
+                  className="collab-btn-share-primary"
+                  onClick={handleShareInvite}
+                >
+                  <Share2 size={16} />
+                  <span>{copiedUrl ? 'Invite Link Copied! 🎉' : 'Share Invite Link'}</span>
+                </button>
+                <button
+                  type="button"
+                  className={`collab-btn-qr-pill ${showQrCode ? 'active' : ''}`}
+                  onClick={() => setShowQrCode(!showQrCode)}
+                  title={showQrCode ? 'Hide QR Code' : 'Show QR Code'}
+                >
+                  <QrCode size={16} />
+                  <span>{showQrCode ? 'Hide QR' : 'Show QR'}</span>
+                </button>
+              </div>
+
+              {/* Scannable Room QR Code Dropdown */}
+              {showQrCode && qrDataUrl && (
+                <div className="collab-qr-box fade-in">
+                  <div className="collab-qr-frame">
+                    <img
+                      src={qrDataUrl}
+                      alt={`Space Jam Room ${room?.code} QR Code`}
+                      className="collab-qr-img"
+                    />
+                  </div>
+                  <div className="collab-qr-caption">
+                    <Scan size={13} className="text-neon-green" />
+                    <span>Scan with any phone camera to join instantly</span>
+                  </div>
+                </div>
+              )}
 
               {/* Leave Room Footer */}
               <div className="collab-room-footer">
@@ -309,8 +342,8 @@ export const CollabRoomModal: React.FC = () => {
                   <span>Scan Another Room</span>
                 </button>
                 <button className="collab-btn-leave" onClick={leaveRoom}>
-                  <LogOut size={16} />
-                  <span>Leave Collab Room</span>
+                  <LogOut size={15} />
+                  <span>Leave Jam</span>
                 </button>
               </div>
             </div>
