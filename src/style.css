@@ -1556,9 +1556,10 @@ button, input {
 }
 
 .player-top-eyebrow {
-  font-size: 0.65rem;
-  letter-spacing: 0.12em;
-  font-weight: 800;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  font-weight: 700;
+  text-transform: uppercase;
   color: var(--text-muted);
 }
 

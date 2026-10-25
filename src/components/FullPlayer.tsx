@@ -313,7 +313,6 @@ export const FullPlayer: React.FC = () => {
 
           <div className="player-top-info">
             <span className="player-top-eyebrow">NOW PLAYING</span>
-            <span className="player-top-album">{currentSong.album || 'Space Stream'}</span>
           </div>
 
           <div className="player-top-actions">
