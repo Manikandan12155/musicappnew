@@ -1,4 +1,5 @@
-import React, { useState, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import { audioEngine } from '../services/audioEngine';
 
 interface WaveformTimelineProps {
   duration: number;
@@ -9,8 +10,8 @@ interface WaveformTimelineProps {
   isPlaying: boolean;
 }
 
-// Generate realistic, deterministic waveform bars seeded by song ID & title
-function generateSongWaveform(songId: string, title: string, barCount: number = 60): number[] {
+// Deterministic audio waveform profile seeded by song ID & title
+function generateSongWaveform(songId: string, title: string, barCount: number = 64): number[] {
   let seed = 0;
   const str = `${songId}-${title}`;
   for (let i = 0; i < str.length; i++) {
@@ -23,20 +24,18 @@ function generateSongWaveform(songId: string, title: string, barCount: number = 
 
   for (let i = 0; i < barCount; i++) {
     const progress = i / barCount;
-    // Macro envelope: lower at start and end, energetic peaks in chorus (35% - 75%)
     let envelope = Math.sin(progress * Math.PI);
-    if (progress > 0.3 && progress < 0.75) {
-      envelope = Math.min(1, envelope * 1.35);
+    if (progress > 0.28 && progress < 0.78) {
+      envelope = Math.min(1, envelope * 1.32);
     }
 
-    // Micro pseudo-random harmonic oscillation
     const freq1 = Math.sin(i * 0.75 + (absSeed % 17)) * 0.3;
-    const freq2 = Math.cos(i * 1.6 + (absSeed % 23)) * 0.25;
-    const freq3 = Math.sin(i * 3.2 + (absSeed % 31)) * 0.15;
+    const freq2 = Math.cos(i * 1.6 + (absSeed % 23)) * 0.22;
+    const freq3 = Math.sin(i * 3.1 + (absSeed % 31)) * 0.14;
     const noise = Math.abs(freq1 + freq2 + freq3);
 
-    const rawHeight = envelope * 0.55 + noise * 0.45;
-    const clamped = Math.max(0.18, Math.min(1.0, rawHeight));
+    const rawHeight = envelope * 0.58 + noise * 0.42;
+    const clamped = Math.max(0.18, Math.min(0.96, rawHeight));
     bars.push(clamped);
   }
 
@@ -52,13 +51,14 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
   isPlaying
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isScrubbing, setIsScrubbing] = useState<boolean>(false);
   const [scrubPercent, setScrubPercent] = useState<number>(0);
   const [hoverPercent, setHoverPercent] = useState<number | null>(null);
 
-  // Memoized deterministic waveform for this exact song
+  // Deterministic master curve for this song
   const bars = useMemo(() => {
-    return generateSongWaveform(songId, songTitle, 62);
+    return generateSongWaveform(songId, songTitle, 64);
   }, [songId, songTitle]);
 
   const activeProgress = isScrubbing
@@ -74,6 +74,102 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
     return `${m}:${s < 10 ? '0' : ''}${s}`;
   };
 
+  // High-performance canvas loop: Merges real-time frequency reactivity + waveform timeline!
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animId: number;
+    let active = true;
+
+    // Smooth heights array for organic frequency bouncing
+    const currentBars = [...bars];
+
+    const render = () => {
+      if (!active) return;
+
+      const dpr = window.devicePixelRatio || 1;
+      const displayWidth = canvas.clientWidth;
+      const displayHeight = canvas.clientHeight;
+
+      if (canvas.width !== displayWidth * dpr || canvas.height !== displayHeight * dpr) {
+        canvas.width = displayWidth * dpr;
+        canvas.height = displayHeight * dpr;
+      }
+
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      ctx.clearRect(0, 0, displayWidth, displayHeight);
+
+      const freqData = audioEngine.getFrequencyData();
+      const count = bars.length;
+      const barWidth = Math.max(2, (displayWidth / count) * 0.62);
+      const gap = (displayWidth - barWidth * count) / (count - 1);
+
+      for (let i = 0; i < count; i++) {
+        const baseHeight = bars[i];
+        const binIndex = Math.min(freqData.length - 1, Math.floor((i / count) * freqData.length));
+        const rawByte = isPlaying ? (freqData[binIndex] || 0) : 0;
+        const liveMod = (rawByte / 255) * 0.4;
+        const targetHeight = Math.max(0.14, Math.min(1.0, baseHeight * 0.65 + liveMod));
+
+        // Smooth physics interpolation
+        currentBars[i] += (targetHeight - currentBars[i]) * 0.28;
+
+        const barProgress = i / (count - 1);
+        const isPlayed = barProgress <= activeProgress;
+        const isHovered = hoverPercent !== null && barProgress <= hoverPercent;
+
+        const x = i * (barWidth + gap);
+        const barH = currentBars[i] * (displayHeight * 0.78);
+        const y = (displayHeight - barH) / 2;
+        const radius = Math.min(barWidth / 2, 2.5);
+
+        // Color styling: Played = Neon Green (#39FF14), Unplayed = Muted Dark Emerald
+        if (isPlayed) {
+          ctx.fillStyle = '#39FF14';
+          ctx.shadowColor = '#39FF14';
+          ctx.shadowBlur = isPlaying ? 6 : 2;
+        } else if (isHovered) {
+          ctx.fillStyle = 'rgba(57, 255, 20, 0.48)';
+          ctx.shadowBlur = 0;
+        } else {
+          ctx.fillStyle = 'rgba(57, 255, 20, 0.18)';
+          ctx.shadowBlur = 0;
+        }
+
+        ctx.beginPath();
+        ctx.roundRect(x, y, barWidth, barH, radius);
+        ctx.fill();
+      }
+
+      // Draw active playhead needle
+      const playheadX = activeProgress * displayWidth;
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#39FF14';
+      ctx.shadowBlur = 10;
+      ctx.fillRect(Math.max(0, playheadX - 1), 4, 2, displayHeight - 8);
+
+      // Top beacon dot
+      ctx.beginPath();
+      ctx.arc(playheadX, 6, 4, 0, Math.PI * 2);
+      ctx.fillStyle = '#39FF14';
+      ctx.fill();
+
+      ctx.restore();
+      animId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    return () => {
+      active = false;
+      if (animId) cancelAnimationFrame(animId);
+    };
+  }, [bars, activeProgress, hoverPercent, isPlaying]);
+
   const getPositionFromEvent = useCallback((clientX: number): number => {
     if (!containerRef.current) return 0;
     const rect = containerRef.current.getBoundingClientRect();
@@ -82,7 +178,7 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
   }, []);
 
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    e.stopPropagation(); // Prevent parent swipe handler
+    e.stopPropagation(); // Stop parent horizontal swipe from triggering
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     setIsScrubbing(true);
     const pos = getPositionFromEvent(e.clientX);
@@ -122,11 +218,11 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
   const remainingTime = Math.max(0, duration - currentDisplayTime);
 
   return (
-    <div className="waveform-timeline-container" onClick={(e) => e.stopPropagation()}>
-      {/* Waveform Scrubber Surface */}
+    <div className="unified-waveform-wrapper" onClick={(e) => e.stopPropagation()}>
+      {/* Waveform Scrubber Surface with Inside Times */}
       <div
         ref={containerRef}
-        className={`waveform-track-area ${isScrubbing ? 'is-scrubbing' : ''}`}
+        className={`unified-waveform-track ${isScrubbing ? 'is-scrubbing' : ''}`}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -143,37 +239,21 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
           if (e.key === 'ArrowLeft') onSeek(Math.max(0, currentTime - 5));
         }}
       >
-        {/* Sequence of Vertical Waveform Bars */}
-        <div className="waveform-bars-wrapper">
-          {bars.map((heightMultiplier, index) => {
-            const barProgress = index / (bars.length - 1);
-            const isPlayed = barProgress <= activeProgress;
-            const isHovered = hoverPercent !== null && barProgress <= hoverPercent;
+        {/* Real-time Frequency + Waveform Canvas */}
+        <canvas ref={canvasRef} className="waveform-live-canvas" />
 
-            return (
-              <div
-                key={index}
-                className={`wave-bar ${isPlayed ? 'bar-played' : 'bar-unplayed'} ${
-                  isHovered && !isPlayed ? 'bar-hovered' : ''
-                } ${isPlaying && isPlayed ? 'bar-alive' : ''}`}
-                style={{
-                  height: `${Math.round(heightMultiplier * 100)}%`
-                }}
-              />
-            );
-          })}
+        {/* Normal Elapsed Time Badge INSIDE Left */}
+        <div className="waveform-inside-badge time-normal">
+          <span className="inside-badge-dot" />
+          <span>{formatTime(currentDisplayTime)}</span>
         </div>
 
-        {/* Neon Glow Playhead Indicator */}
-        <div
-          className="waveform-playhead"
-          style={{ left: `${activeProgress * 100}%` }}
-        >
-          <div className="playhead-line" />
-          <div className="playhead-glow-dot" />
+        {/* Reverse Remaining Time Badge INSIDE Right */}
+        <div className="waveform-inside-badge time-reverse">
+          <span>-{formatTime(remainingTime)}</span>
         </div>
 
-        {/* Hover Scrubbing Timestamp Tooltip */}
+        {/* Hover Scrubbing Needle Tooltip */}
         {hoverPercent !== null && !isScrubbing && (
           <div
             className="waveform-hover-needle"
@@ -184,16 +264,6 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
             </div>
           </div>
         )}
-      </div>
-
-      {/* Time Display Bar */}
-      <div className="waveform-time-row">
-        <span className="time-metric elapsed-time">{formatTime(currentDisplayTime)}</span>
-        <div className="waveform-center-badge">
-          <span className="live-wave-dot" />
-          <span>WAVEFORM TIMELINE</span>
-        </div>
-        <span className="time-metric remaining-time">-{formatTime(remainingTime)}</span>
       </div>
     </div>
   );
