@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import QRCode from 'qrcode';
 import { QRScannerModal } from './QRScannerModal';
 import { useCollab } from '../context/CollabContext';
-import { useMusic } from '../context/MusicContext';
 import { collabSocket } from '../services/collabSocket';
 import {
   Users,
@@ -10,18 +9,9 @@ import {
   Copy,
   Check,
   X,
-  Play,
-  Pause,
-  Crown,
   Share2,
   Sparkles,
   LogOut,
-  Radio,
-  Flame,
-  Heart,
-  Rocket,
-  Zap,
-  Music2,
   QrCode,
   Camera,
   Scan
@@ -31,7 +21,6 @@ export const CollabRoomModal: React.FC = () => {
   const {
     room,
     isInRoom,
-    isHost,
     isConnected,
     isCollabModalOpen,
     userName,
@@ -41,11 +30,8 @@ export const CollabRoomModal: React.FC = () => {
     createRoom,
     joinRoom,
     leaveRoom,
-    sendReaction,
     clearError
   } = useCollab();
-
-  const { currentSong, isPlaying, togglePlay } = useMusic();
 
   const [inputCode, setInputCode] = useState('');
   const [copied, setCopied] = useState(false);
@@ -92,14 +78,6 @@ export const CollabRoomModal: React.FC = () => {
     setTimeout(() => setCopiedUrl(false), 2000);
   };
 
-  const reactionEmojis = [
-    { emoji: '🔥', label: 'Fire' },
-    { emoji: '❤️', label: 'Love' },
-    { emoji: '🚀', label: 'Space' },
-    { emoji: '🪩', label: 'Party' },
-    { emoji: '⚡', label: 'Vibe' },
-    { emoji: '🎧', label: 'Bass' }
-  ];
 
   return (
     <div className="collab-modal-overlay" onClick={() => setIsCollabModalOpen(false)}>
@@ -276,85 +254,6 @@ export const CollabRoomModal: React.FC = () => {
                     <Share2 size={13} />
                     <span>{copiedUrl ? 'Link Copied!' : 'Copy Link'}</span>
                   </button>
-                </div>
-              </div>
-
-              {/* Synced Now Playing Preview */}
-              <div className="collab-synced-player-card">
-                <div className="synced-player-tag">
-                  <Radio size={13} className="live-spin" />
-                  <span>SYNCED PLAYBACK</span>
-                </div>
-                {currentSong ? (
-                  <div className="synced-song-row">
-                    <img
-                      src={currentSong.coverUrl || '/assets/space-music-logo.png'}
-                      alt={currentSong.title}
-                      className="synced-song-cover"
-                    />
-                    <div className="synced-song-info">
-                      <h4 className="synced-song-title">{currentSong.title}</h4>
-                      <p className="synced-song-artist">{currentSong.artist}</p>
-                    </div>
-                    <button
-                      className="synced-play-toggle"
-                      onClick={togglePlay}
-                      title={isPlaying ? 'Pause for all' : 'Play for all'}
-                    >
-                      {isPlaying ? <Pause size={18} /> : <Play size={18} fill="currentColor" />}
-                    </button>
-                  </div>
-                ) : (
-                  <div className="synced-empty-state">
-                    <Music2 size={24} />
-                    <span>No song playing. Tap any song to broadcast to room!</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Live Reactions Bar */}
-              <div className="collab-reactions-section">
-                <label className="section-label">Send Real-Time Reaction</label>
-                <div className="reaction-buttons-grid">
-                  {reactionEmojis.map((r) => (
-                    <button
-                      key={r.emoji}
-                      className="reaction-tap-btn"
-                      onClick={() => sendReaction(r.emoji)}
-                      title={`Send ${r.label}`}
-                    >
-                      <span className="reaction-char">{r.emoji}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Connected Listeners List */}
-              <div className="collab-members-section">
-                <div className="members-header-row">
-                  <label className="section-label">
-                    Connected WiFi Listeners ({room?.memberCount || 1})
-                  </label>
-                </div>
-                <div className="members-list">
-                  {room?.members.map((member) => (
-                    <div key={member.id} className="member-item">
-                      <div className="member-avatar">
-                        {member.name.charAt(0).toUpperCase()}
-                        <div className="online-indicator" />
-                      </div>
-                      <div className="member-details">
-                        <span className="member-name">
-                          {member.name} {member.id === collabSocket.myUserId ? '(You)' : ''}
-                        </span>
-                        {member.isHost && (
-                          <span className="host-pill">
-                            <Crown size={11} /> Room Host
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
                 </div>
               </div>
 
