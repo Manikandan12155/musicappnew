@@ -123,8 +123,11 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
         const isHovered = hoverPercent !== null && barProgress <= hoverPercent;
 
         const x = i * (barWidth + gap);
-        const barH = currentBars[i] * (displayHeight * 0.78);
-        const y = (displayHeight - barH) / 2;
+        // Anchor bottom baseline: bottom line stays perfectly flat, top edges bounce/jump upwards!
+        const bottomMargin = 6;
+        const maxBarH = displayHeight - bottomMargin - 12;
+        const barH = Math.max(4, currentBars[i] * maxBarH);
+        const y = displayHeight - bottomMargin - barH;
         const radius = Math.min(barWidth / 2, 2.5);
 
         // Color styling: Played = Neon Green (#39FF14), Unplayed = Muted Dark Emerald
@@ -136,12 +139,13 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
           ctx.fillStyle = 'rgba(57, 255, 20, 0.48)';
           ctx.shadowBlur = 0;
         } else {
-          ctx.fillStyle = 'rgba(57, 255, 20, 0.18)';
+          ctx.fillStyle = 'rgba(57, 255, 20, 0.2)';
           ctx.shadowBlur = 0;
         }
 
         ctx.beginPath();
-        ctx.roundRect(x, y, barWidth, barH, radius);
+        // Rounded tops with flat bottom anchored to baseline
+        ctx.roundRect(x, y, barWidth, barH, [radius, radius, 1, 1]);
         ctx.fill();
       }
 

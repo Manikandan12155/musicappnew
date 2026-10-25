@@ -59,13 +59,6 @@ export const FullPlayer: React.FC = () => {
   const [volume, setVolumeState] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
-  const [bgMode, setBgMode] = useState<'picture' | 'video'>(() => {
-    try {
-      return (localStorage.getItem('space_player_bg_mode') as 'picture' | 'video') || 'picture';
-    } catch {
-      return 'picture';
-    }
-  });
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -215,8 +208,8 @@ export const FullPlayer: React.FC = () => {
 
     return (
       <div className={`full-player-overlay mode-${playerMode}`}>
-        {/* Dynamic Background: Song Picture OR Song Video running in background */}
-        {bgMode === 'video' && videoId ? (
+        {/* Permanent Cinematic Video Background (or Picture fallback if no video) */}
+        {videoId ? (
           <div className="player-video-background">
             <iframe
               className="player-video-iframe"
@@ -336,6 +329,30 @@ export const FullPlayer: React.FC = () => {
                   <ChevronRight size={22} />
                 </div>
 
+                {/* Left & Right Liquid Glass Navigation Arrows */}
+                <button
+                  className="liquid-swipe-arrow arrow-left"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    prevSong();
+                  }}
+                  title="Previous Song"
+                  aria-label="Previous track"
+                >
+                  <ChevronLeft size={28} />
+                </button>
+                <button
+                  className="liquid-swipe-arrow arrow-right"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    nextSong();
+                  }}
+                  title="Next Song"
+                  aria-label="Next track"
+                >
+                  <ChevronRight size={28} />
+                </button>
+
                 {/* Animated Transform Container for smooth swiping */}
                 <div
                   className="artwork-swipe-transform"
@@ -345,13 +362,13 @@ export const FullPlayer: React.FC = () => {
                     opacity: 1 - Math.min(0.4, Math.abs(dragOffset) / 300)
                   }}
                 >
-                  {/* Song Cover Picture Glass Card */}
+                  {/* Pure Liquid Glass Song Cover Card */}
                   <div
                     className={`artwork-glass-card ${isPlaying ? 'artwork-floating' : ''}`}
                     style={{
                       boxShadow: isPlaying
-                        ? `0 20px 50px rgba(0, 0, 0, 0.8), 0 0 ${Math.round(25 * beatScale)}px rgba(57, 255, 20, 0.35)`
-                        : '0 20px 50px rgba(0, 0, 0, 0.7)'
+                        ? `0 25px 60px rgba(0, 0, 0, 0.6), 0 0 ${Math.round(35 * beatScale)}px rgba(57, 255, 20, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.35)`
+                        : '0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25)'
                     }}
                   >
                     <img
@@ -362,49 +379,37 @@ export const FullPlayer: React.FC = () => {
                     <div className="artwork-sheen-overlay" />
                   </div>
                 </div>
-
-                {/* Switch between Song Picture & Song Video Background */}
-                <div className="stage-action-bar">
-                  <button
-                    className="art-mode-switch-btn"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setBgMode((prev) => {
-                        const next = prev === 'picture' ? 'video' : 'picture';
-                        try {
-                          localStorage.setItem('space_player_bg_mode', next);
-                        } catch {}
-                        return next;
-                      });
-                    }}
-                    title={bgMode === 'picture' ? 'Switch to Song Video Background' : 'Switch to Song Picture Background'}
-                  >
-                    <span>
-                      {bgMode === 'picture' ? '🖼️ Picture Background' : '🎬 Video Background'}
-                    </span>
-                  </button>
-                  <span className="swipe-instruction-tag">Swipe left/right to change track</span>
-                </div>
               </div>
 
-              {/* Title & Artist & Favorite row */}
+              {/* Title & Artist & Favorite / Shuffle row */}
               <div className="meta-and-like-row">
                 <div className="meta-text-block">
                   <h2 className="song-title-main">{currentSong.title}</h2>
                   <p className="song-artist-main">{currentSong.artist}</p>
                 </div>
-                <button
-                  className={`full-like-btn ${isLiked ? 'liked' : ''}`}
-                  onClick={() => toggleLikeSong(currentSong.id)}
-                  title={isLiked ? 'Favorited' : 'Add to Favorites'}
-                  aria-label={isLiked ? 'Remove from favorites' : 'Add to favorites'}
-                >
-                  <Heart
-                    size={26}
-                    fill={isLiked ? '#ff2a5f' : 'none'}
-                    color={isLiked ? '#ff2a5f' : 'currentColor'}
-                  />
-                </button>
+                <div className="meta-actions-cluster">
+                  <button
+                    className={`meta-action-btn shuffle-meta-btn ${isShuffle ? 'active-neon' : ''}`}
+                    onClick={toggleShuffle}
+                    title={isShuffle ? 'Shuffle: ON' : 'Shuffle: OFF'}
+                    aria-label="Toggle shuffle"
+                  >
+                    <Shuffle size={20} />
+                    {isShuffle && <span className="active-dot" />}
+                  </button>
+                  <button
+                    className={`full-like-btn ${isLiked ? 'liked' : ''}`}
+                    onClick={() => toggleLikeSong(currentSong.id)}
+                    title={isLiked ? 'Favorited' : 'Add to Favorites'}
+                    aria-label={isLiked ? 'Remove from favorites' : 'Add to favorites'}
+                  >
+                    <Heart
+                      size={26}
+                      fill={isLiked ? '#ff2a5f' : 'none'}
+                      color={isLiked ? '#ff2a5f' : 'currentColor'}
+                    />
+                  </button>
+                </div>
               </div>
 
               {/* Merged Live Audio-Reactive Waveform Timeline with Inside Normal & Reverse Times */}
@@ -419,25 +424,6 @@ export const FullPlayer: React.FC = () => {
 
               {/* Futuristic Cyber-Control Capsule with Integrated Smart Volume Alternative */}
               <div className="futuristic-control-console">
-                <button
-                  className={`console-btn sub-btn ${isShuffle ? 'active-neon' : ''}`}
-                  onClick={toggleShuffle}
-                  title={isShuffle ? 'Shuffle: ON' : 'Shuffle: OFF'}
-                  aria-label="Toggle shuffle"
-                >
-                  <Shuffle size={19} />
-                  {isShuffle && <span className="active-dot" />}
-                </button>
-
-                <button
-                  className="console-btn step-btn"
-                  onClick={prevSong}
-                  title="Previous Track (Swipe Right on Artwork)"
-                  aria-label="Previous track"
-                >
-                  <SkipBack size={24} />
-                </button>
-
                 <button
                   className={`console-btn primary-holo-play ${isPlaying ? 'is-playing' : ''}`}
                   onClick={togglePlay}

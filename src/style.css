@@ -1400,32 +1400,34 @@ button, input {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 16px;
-  background: rgba(11, 12, 16, 0.72);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--glass-border);
-  border-radius: var(--radius-full);
-  padding: 6px 14px;
+  margin-bottom: 14px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 4px 2px;
 }
 
 .player-icon-btn {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   color: var(--text-primary);
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  flex-shrink: 0;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.25);
 }
 
 .player-icon-btn:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.18);
+  border-color: rgba(255, 255, 255, 0.35);
+  transform: scale(1.06);
 }
 
 .player-top-info {
@@ -1459,15 +1461,18 @@ button, input {
   flex-shrink: 0;
 }
 
-/* Player Navigation Tabs */
+/* Player Navigation Tabs (Liquid Glass Capsule) */
 .player-nav-tabs {
   display: flex;
-  background: rgba(0, 0, 0, 0.45);
-  border: 1px solid var(--glass-border);
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(24px) saturate(190%);
+  -webkit-backdrop-filter: blur(24px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: var(--radius-full);
   padding: 4px;
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   gap: 4px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 .player-tab-pill {
@@ -1484,15 +1489,15 @@ button, input {
   font-size: clamp(0.75rem, 1.4vw, 0.85rem);
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s ease;
   white-space: nowrap;
 }
 
 .player-tab-pill.active {
-  background: var(--glass-bg);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.14);
+  backdrop-filter: blur(16px);
   color: #fff;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.3);
 }
 
 .player-body {
@@ -1588,15 +1593,62 @@ button, input {
   opacity: 0.65;
 }
 
+/* Liquid Glass Navigation Arrows on Sides of Artwork */
+.liquid-swipe-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.45), inset 0 1px 1px rgba(255, 255, 255, 0.3);
+  z-index: 15;
+}
+
+.liquid-swipe-arrow.arrow-left {
+  left: 6px;
+}
+
+.liquid-swipe-arrow.arrow-right {
+  right: 6px;
+}
+
+.liquid-swipe-arrow:hover {
+  background: rgba(57, 255, 20, 0.22);
+  border-color: #39FF14;
+  color: #39FF14;
+  transform: translateY(-50%) scale(1.12);
+  box-shadow: 0 0 25px rgba(57, 255, 20, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+
+.liquid-swipe-arrow:active {
+  transform: translateY(-50%) scale(0.92);
+}
+
+/* Pure Liquid Glass Artwork Card (Zero Black Letterboxing) */
 .artwork-glass-card {
   position: relative;
-  width: min(68vw, 320px);
-  max-height: min(320px, 36vh);
+  width: min(72vw, 290px);
+  height: min(72vw, 290px);
   aspect-ratio: 1;
-  border-radius: var(--radius-xl);
+  border-radius: 26px;
   overflow: hidden;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7), 0 0 0 1px var(--glass-border);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  background: transparent;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(57, 255, 20, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .artwork-floating {
@@ -1612,6 +1664,7 @@ button, input {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  display: block;
 }
 
 /* ==========================================================================
@@ -1933,7 +1986,7 @@ button, input {
 }
 
 .meta-text-block {
-  max-width: 80%;
+  max-width: 72%;
   overflow: hidden;
 }
 
@@ -1952,9 +2005,50 @@ button, input {
   word-break: break-word;
 }
 
+/* Cluster with Shuffle & Favorite next to each other */
+.meta-actions-cluster {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.meta-action-btn {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: var(--text-secondary);
+  width: clamp(38px, 5.5vw, 44px);
+  height: clamp(38px, 5.5vw, 44px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.meta-action-btn:hover {
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff;
+  transform: scale(1.06);
+}
+
+.meta-action-btn.active-neon {
+  color: #39FF14;
+  border-color: rgba(57, 255, 20, 0.5);
+  background: rgba(57, 255, 20, 0.18);
+  box-shadow: 0 0 18px rgba(57, 255, 20, 0.45);
+}
+
 .full-like-btn {
   background: rgba(255, 255, 255, 0.08);
-  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   color: #fff;
   width: clamp(40px, 6vw, 48px);
   height: clamp(40px, 6vw, 48px);
@@ -1964,12 +2058,14 @@ button, input {
   justify-content: center;
   cursor: pointer;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3), inset 0 1px 1px rgba(255, 255, 255, 0.2);
 }
 
 .full-like-btn.liked {
   border-color: #ff2a5f;
-  background: rgba(255, 42, 95, 0.2);
+  background: rgba(255, 42, 95, 0.22);
+  box-shadow: 0 0 20px rgba(255, 42, 95, 0.5);
 }
 
 /* ==========================================================================
@@ -2081,21 +2177,21 @@ button, input {
 }
 
 /* ==========================================================================
-   FUTURISTIC CYBER CONTROL CONSOLE & SMART VOLUME ALTERNATIVE
+   FUTURISTIC LIQUID GLASS CONTROL CONSOLE
    ========================================================================== */
 .futuristic-control-console {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  background: rgba(14, 18, 14, 0.82);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(57, 255, 20, 0.25);
-  border-radius: 40px;
-  padding: 8px 16px;
+  justify-content: space-around;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(28px) saturate(190%);
+  -webkit-backdrop-filter: blur(28px) saturate(190%);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: var(--radius-full);
+  padding: 10px 24px;
   margin-top: 4px;
-  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.65), 0 0 20px rgba(57, 255, 20, 0.1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 25px rgba(57, 255, 20, 0.12);
   position: relative;
 }
 
