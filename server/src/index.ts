@@ -71,18 +71,56 @@ function extractArtist(runs: any[]): string {
   return filtered.length > 0 ? filtered[0] : 'Space Music';
 }
 
+function parseInnerTubeRuns(runs: any[]): { artist: string; album: string; duration: number } {
+  if (!runs || !Array.isArray(runs)) return { artist: 'Space Music', album: 'Space Mix', duration: 0 };
+
+  const sections: string[] = [];
+  let currentSection: string[] = [];
+  for (const r of runs) {
+    const txt = (r.text || '').trim();
+    if (txt === '•') {
+      if (currentSection.length) sections.push(currentSection.join('').trim());
+      currentSection = [];
+    } else {
+      currentSection.push(r.text || '');
+    }
+  }
+  if (currentSection.length) sections.push(currentSection.join('').trim());
+
+  let artist = '';
+  let album = '';
+  let duration = 0;
+
+  for (const sec of sections) {
+    if (!sec) continue;
+    if (/^\d+:[0-5]\d(:[0-5]\d)?$/.test(sec)) {
+      const parts = sec.split(':').map(Number);
+      if (parts.length === 2) duration = parts[0] * 60 + parts[1];
+      else if (parts.length === 3) duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+      continue;
+    }
+    if (/^\d+(\.\d+)?[MBK]?\s*(plays|views)$/i.test(sec) || /^(Song|Video|Episode|Playlist|Single)$/i.test(sec)) {
+      continue;
+    }
+    if (!artist) {
+      artist = sec;
+    } else if (!album) {
+      album = sec;
+    }
+  }
+
+  return {
+    artist: artist || 'Space Music',
+    album: album || `${artist || 'Space'} Mix`,
+    duration
+  };
+}
+
 // 1. Core Engine: Direct YouTube Music InnerTube (Zero API Key, Unlimited)
 async function fetchFromYouTubeMusicInnerTube(query: string, limit = 16) {
-  try {
-    const res = await fetch('https://music.youtube.com/youtubei/v1/search?alt=json', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Origin': 'https://music.youtube.com',
-        'Referer': 'https://music.youtube.com/'
-      },
-      body: JSON.stringify({
+  const trySearch = async (paramsFilter?: string) => {
+    try {
+      const bodyPayload: any = {
         context: {
           client: {
             clientName: 'WEB_REMIX',
@@ -92,73 +130,129 @@ async function fetchFromYouTubeMusicInnerTube(query: string, limit = 16) {
           }
         },
         query: query
-      })
-    });
+      };
+      if (paramsFilter) {
+        bodyPayload.params = paramsFilter;
+      }
 
-    if (!res.ok) {
-      throw new Error(`InnerTube HTTP error ${res.status}`);
-    }
+      const res = await fetch('https://music.youtube.com/youtubei/v1/search?alt=json', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+          'Origin': 'https://music.youtube.com',
+          'Referer': 'https://music.youtube.com/'
+        },
+        body: JSON.stringify(bodyPayload)
+      });
 
-    const data = await res.json();
-    const list: any[] = [];
-    const seen = new Set<string>();
+      if (!res.ok) return [];
 
-    function findItems(node: any) {
-      if (!node || typeof node !== 'object') return;
+      const data = await res.json();
+      const list: any[] = [];
+      const seen = new Set<string>();
 
-      if (node.musicResponsiveListItemRenderer) {
-        const item = node.musicResponsiveListItemRenderer;
-        const flexCols = item.flexColumns || [];
+      function findItems(node: any) {
+        if (!node || typeof node !== 'object') return;
 
-        let title: string | null = null;
-        let videoId: string | null = null;
-        let artist: string = 'Space Artist';
+        if (node.musicResponsiveListItemRenderer) {
+          const item = node.musicResponsiveListItemRenderer;
+          const flexCols = item.flexColumns || [];
+          const fixedCols = item.fixedColumns || [];
 
-        const col0Runs = flexCols[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs;
-        if (col0Runs && col0Runs[0]) {
-          title = col0Runs[0].text;
-          videoId = col0Runs[0].navigationEndpoint?.watchEndpoint?.videoId;
+          let title: string | null = null;
+          let videoId: string | null = null;
+
+          const col0Runs = flexCols[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs;
+          if (col0Runs && col0Runs[0]) {
+            title = col0Runs[0].text;
+            videoId = col0Runs[0].navigationEndpoint?.watchEndpoint?.videoId;
+          }
+
+          if (!videoId) {
+            videoId = item.playlistItemData?.videoId ||
+              item.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
+          }
+
+          const col1Runs = flexCols[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs;
+          const parsed = parseInnerTubeRuns(col1Runs);
+          let duration = parsed.duration;
+
+          // Check fixed columns if duration wasn't in col1
+          if (!duration && Array.isArray(fixedCols)) {
+            for (const fCol of fixedCols) {
+              const runs = fCol?.musicResponsiveListItemFixedColumnRenderer?.text?.runs || [];
+              for (const r of runs) {
+                const txt = (r?.text || '').trim();
+                if (/^\d+:[0-5]\d(:[0-5]\d)?$/.test(txt)) {
+                  const parts = txt.split(':').map(Number);
+                  if (parts.length === 2) duration = parts[0] * 60 + parts[1];
+                  else if (parts.length === 3) duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                  break;
+                }
+              }
+              if (duration) break;
+            }
+          }
+
+          // Check other flex columns
+          if (!duration && flexCols.length > 2) {
+            for (let i = 2; i < flexCols.length; i++) {
+              const runs = flexCols[i]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs || [];
+              for (const r of runs) {
+                const txt = (r?.text || '').trim();
+                if (/^\d+:[0-5]\d(:[0-5]\d)?$/.test(txt)) {
+                  const parts = txt.split(':').map(Number);
+                  if (parts.length === 2) duration = parts[0] * 60 + parts[1];
+                  else if (parts.length === 3) duration = parts[0] * 3600 + parts[1] * 60 + parts[2];
+                  break;
+                }
+              }
+              if (duration) break;
+            }
+          }
+
+          const thumbs = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
+          const rawThumb = thumbs[thumbs.length - 1]?.url;
+          const coverUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : (rawThumb || '');
+
+          if (videoId && title && !seen.has(videoId)) {
+            seen.add(videoId);
+            list.push({
+              id: videoId,
+              title: cleanSongTitle(title),
+              artist: cleanArtistName(parsed.artist),
+              album: parsed.album,
+              duration,
+              coverUrl,
+              audioUrl: `/api/stream/${videoId}`,
+              genre: 'Space Stream',
+              url: `/api/stream/${videoId}`
+            });
+          }
         }
 
-        if (!videoId) {
-          videoId = item.playlistItemData?.videoId ||
-            item.overlay?.musicItemThumbnailOverlayRenderer?.content?.musicPlayButtonRenderer?.playNavigationEndpoint?.watchEndpoint?.videoId;
-        }
-
-        const col1Runs = flexCols[1]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs;
-        if (col1Runs) {
-          artist = extractArtist(col1Runs);
-        }
-
-        const thumbs = item.thumbnail?.musicThumbnailRenderer?.thumbnail?.thumbnails || [];
-        const rawThumb = thumbs[thumbs.length - 1]?.url;
-        const coverUrl = videoId ? `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg` : (rawThumb || '');
-
-        if (videoId && title && !seen.has(videoId)) {
-          seen.add(videoId);
-          list.push({
-            id: videoId,
-            title: cleanSongTitle(title),
-            artist: cleanArtistName(artist),
-            album: `${cleanArtistName(artist)} Mix`,
-            duration: 215,
-            coverUrl,
-            audioUrl: `/api/stream/${videoId}`,
-            genre: 'Space Stream',
-            url: `/api/stream/${videoId}`
-          });
+        for (const key of Object.keys(node)) {
+          findItems(node[key]);
         }
       }
 
-      for (const key of Object.keys(node)) {
-        findItems(node[key]);
-      }
+      findItems(data);
+      return list;
+    } catch {
+      return [];
     }
+  };
 
-    findItems(data);
-
-    if (list.length > 0) {
-      return list.slice(0, limit);
+  try {
+    // 1st Priority: Songs filtered search (returns clean tracks with accurate duration & album)
+    let songs = await trySearch('EgWKAQIIAWoKEAkQBRAKEAMQBA%3D%3D');
+    if (!songs || songs.length === 0) {
+      // Fallback: general music search
+      songs = await trySearch();
+    }
+    if (songs && songs.length > 0) {
+      return songs.slice(0, limit);
     }
   } catch (err: any) {
     console.warn('InnerTube fetch error:', err.message);

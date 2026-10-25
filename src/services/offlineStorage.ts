@@ -53,7 +53,7 @@ class OfflineStorageService {
         title: song.title,
         artist: song.artist,
         album: song.album || 'Single',
-        duration: song.duration || 210,
+        duration: song.duration || 0,
         coverUrl: song.coverUrl,
         genre: song.genre || 'Music',
         audioBlob,

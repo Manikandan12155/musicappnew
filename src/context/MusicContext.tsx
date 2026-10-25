@@ -241,6 +241,11 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const cur = audioEngine.getCurrentTime();
       setCurrentTime(cur);
 
+      const dur = audioEngine.getDuration();
+      if (dur && !isNaN(dur) && dur > 0) {
+        setDuration(prev => (prev === dur ? prev : dur));
+      }
+
       if (currentSong?.lyrics && currentSong.lyrics.length > 0) {
         let activeIdx = -1;
         for (let i = 0; i < currentSong.lyrics.length; i++) {
@@ -317,13 +322,13 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const idx = newQueue.findIndex((s) => s.id === song.id);
     setQueueIndex(idx !== -1 ? idx : 0);
     setCurrentTime(0);
-    setDuration(song.duration || 210);
+    setDuration(song.duration || 0);
 
     fetchLyricsForSong(song);
 
     try {
       const finalAudioUrl = song.audioUrl.startsWith('/api') ? apiUrl(song.audioUrl) : song.audioUrl;
-      await audioEngine.play(finalAudioUrl, song.id);
+      await audioEngine.play(finalAudioUrl, song.id, song.duration);
       setIsPlaying(true);
     } catch (e) {
       console.warn('Playback error or user gesture required:', e);

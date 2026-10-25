@@ -165,6 +165,7 @@ export const SearchScreen: React.FC = () => {
   ];
 
   const formatDuration = (secs: number) => {
+    if (!secs || isNaN(secs) || secs <= 0) return '';
     const m = Math.floor(secs / 60);
     const s = Math.floor(secs % 60);
     return `${m}:${s < 10 ? '0' : ''}${s}`;

@@ -19,7 +19,7 @@ class AudioEngine {
   private isYtActive = false;
   private ytTimeInterval: ReturnType<typeof setInterval> | null = null;
   private currentYtTime = 0;
-  private currentYtDuration = 215;
+  private currentYtDuration = 0;
   private activeVideoId: string | null = null;
 
   constructor() {
@@ -244,7 +244,10 @@ class AudioEngine {
     }
   }
 
-  public async play(url?: string, videoId?: string): Promise<void> {
+  public async play(url?: string, videoId?: string, knownDuration?: number): Promise<void> {
+    if (knownDuration && knownDuration > 0) {
+      this.currentYtDuration = knownDuration;
+    }
     // If called with no arguments, resume whichever player is active
     if (!url && !videoId) {
       if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
@@ -340,8 +343,8 @@ class AudioEngine {
   }
 
   public getDuration(): number {
-    if (this.isYtActive) return this.currentYtDuration;
-    return this.audio.duration || 215;
+    if (this.isYtActive) return this.currentYtDuration || 0;
+    return this.audio.duration || this.currentYtDuration || 0;
   }
 }
 
