@@ -316,6 +316,54 @@ export const FullPlayer: React.FC = () => {
           </div>
 
           <div className="player-top-actions">
+            {/* Liquid Glass Volume Action with Dropdown Popover */}
+            <div className={`top-vol-wrapper ${isVolOpen ? 'open' : ''}`}>
+              <button
+                className={`player-icon-btn vol-top-btn ${isMuted || volume === 0 ? 'muted' : ''}`}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsVolOpen(!isVolOpen);
+                }}
+                onDoubleClick={(e) => {
+                  e.stopPropagation();
+                  toggleMute();
+                }}
+                title={isMuted ? 'Volume: Muted (Click for slider)' : `Volume: ${Math.round(volume * 100)}% (Click for slider)`}
+                aria-label="Volume setting"
+              >
+                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+              </button>
+
+              {/* Expandable Neon Volume Popover hanging down from top bar */}
+              {isVolOpen && (
+                <div className="top-vol-popover-card" onClick={(e) => e.stopPropagation()}>
+                  <div className="vol-popover-header">
+                    <span>VOLUME</span>
+                    <span className="vol-percent-text">{isMuted ? 'MUTED' : `${Math.round(volume * 100)}%`}</span>
+                  </div>
+                  <div className="vol-popover-slider-row">
+                    <button className="vol-pop-mute-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+                      {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                    </button>
+                    <input
+                      type="range"
+                      min={0}
+                      max={1}
+                      step={0.01}
+                      value={isMuted ? 0 : volume}
+                      onChange={handleVolumeChange}
+                      className="vol-pop-range"
+                      style={{
+                        background: `linear-gradient(to right, #39FF14 ${
+                          (isMuted ? 0 : volume) * 100
+                        }%, rgba(255,255,255,0.18) ${(isMuted ? 0 : volume) * 100}%)`
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+
             <button
               className="player-icon-btn"
               onClick={() => setIsEqualizerOpen(true)}
@@ -443,13 +491,22 @@ export const FullPlayer: React.FC = () => {
                 </div>
               </div>
 
-              {/* Title & Artist & Favorite / Shuffle row */}
+              {/* Title & Artist & Repeat / Shuffle / Favorite row */}
               <div className="meta-and-like-row">
                 <div className="meta-text-block">
                   <h2 className="song-title-main">{currentSong.title}</h2>
                   <p className="song-artist-main">{currentSong.artist}</p>
                 </div>
                 <div className="meta-actions-cluster">
+                  <button
+                    className={`meta-action-btn repeat-meta-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
+                    onClick={toggleRepeat}
+                    title={`Repeat: ${repeatMode}`}
+                    aria-label={`Toggle repeat: ${repeatMode}`}
+                  >
+                    {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+                    {repeatMode !== 'none' && <span className="active-dot" />}
+                  </button>
                   <button
                     className={`meta-action-btn shuffle-meta-btn ${isShuffle ? 'active-neon' : ''}`}
                     onClick={toggleShuffle}
@@ -485,66 +542,7 @@ export const FullPlayer: React.FC = () => {
                 isLightBg={isLightBg}
               />
 
-              {/* Compact Liquid Glass Tool Capsule: Repeat & Volume (Play/Pause moved to Center Tap) */}
-              <div className="futuristic-control-console compact-pill">
-                <button
-                  className={`console-btn sub-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
-                  onClick={toggleRepeat}
-                  title={`Repeat: ${repeatMode}`}
-                  aria-label={`Toggle repeat: ${repeatMode}`}
-                >
-                  {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
-                  {repeatMode !== 'none' && <span className="active-dot" />}
-                </button>
 
-                {/* Smart Volume Alternative: Compact Trigger with Expandable Neon Popover */}
-                <div className={`console-vol-wrapper ${isVolOpen ? 'open' : ''}`}>
-                  <button
-                    className={`console-btn vol-trigger-btn ${isMuted || volume === 0 ? 'muted' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setIsVolOpen(!isVolOpen);
-                    }}
-                    onDoubleClick={(e) => {
-                      e.stopPropagation();
-                      toggleMute();
-                    }}
-                    title={isMuted ? 'Volume: Muted (Click to open slider)' : `Volume: ${Math.round(volume * 100)}% (Click to open slider)`}
-                    aria-label="Volume setting"
-                  >
-                    {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
-                  </button>
-
-                  {/* Expandable Neon Volume Popover */}
-                  {isVolOpen && (
-                    <div className="vol-popover-card" onClick={(e) => e.stopPropagation()}>
-                      <div className="vol-popover-header">
-                        <span>VOLUME</span>
-                        <span className="vol-percent-text">{isMuted ? 'MUTED' : `${Math.round(volume * 100)}%`}</span>
-                      </div>
-                      <div className="vol-popover-slider-row">
-                        <button className="vol-pop-mute-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
-                          {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                        </button>
-                        <input
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.01}
-                          value={isMuted ? 0 : volume}
-                          onChange={handleVolumeChange}
-                          className="vol-pop-range"
-                          style={{
-                            background: `linear-gradient(to right, #39FF14 ${
-                              (isMuted ? 0 : volume) * 100
-                            }%, rgba(255,255,255,0.18) ${(isMuted ? 0 : volume) * 100}%)`
-                          }}
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
             </div>
           )}
 
