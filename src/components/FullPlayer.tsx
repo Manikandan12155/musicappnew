@@ -78,10 +78,10 @@ export const FullPlayer: React.FC = () => {
     } catch {}
   }, [isPlaying]);
 
-  // Extract that song's specific YouTube videoId
-  const videoId = (currentSong.id && currentSong.id.length === 11)
+  // Extract that song's specific YouTube videoId safely
+  const videoId = (currentSong?.id && currentSong.id.length === 11)
     ? currentSong.id
-    : (currentSong.audioUrl && currentSong.audioUrl.includes('/api/stream/'))
+    : (currentSong?.audioUrl && currentSong.audioUrl.includes('/api/stream/'))
     ? currentSong.audioUrl.split('/api/stream/')[1].split('?')[0]
     : null;
 
@@ -292,6 +292,7 @@ export const FullPlayer: React.FC = () => {
   };
 
   const handleShare = () => {
+    if (!currentSong) return;
     if (navigator.share) {
       navigator.share({
         title: currentSong.title,
@@ -303,6 +304,8 @@ export const FullPlayer: React.FC = () => {
       alert(`Copied song name to clipboard: ${currentSong.title}`);
     }
   };
+
+  if (!isFullPlayerOpen || !currentSong) return null;
 
   return (
     <div className={`full-player-overlay mode-${playerMode} ${isLightBg ? 'theme-light-bg' : 'theme-dark-bg'}`}>
