@@ -8,6 +8,7 @@ interface WaveformTimelineProps {
   songId: string;
   songTitle: string;
   isPlaying: boolean;
+  isLightBg?: boolean;
 }
 
 // Deterministic audio waveform profile seeded by song ID & title
@@ -48,7 +49,8 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
   onSeek,
   songId,
   songTitle,
-  isPlaying
+  isPlaying,
+  isLightBg = false
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -130,17 +132,31 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
         const y = displayHeight - bottomMargin - barH;
         const radius = Math.min(barWidth / 2, 2.5);
 
-        // Color styling: Played = Neon Green (#39FF14), Unplayed = Muted Dark Emerald
-        if (isPlayed) {
-          ctx.fillStyle = '#39FF14';
-          ctx.shadowColor = '#39FF14';
-          ctx.shadowBlur = isPlaying ? 6 : 2;
-        } else if (isHovered) {
-          ctx.fillStyle = 'rgba(57, 255, 20, 0.48)';
-          ctx.shadowBlur = 0;
+        // Color styling: Adapt based on Light vs Dark background
+        if (isLightBg) {
+          if (isPlayed) {
+            ctx.fillStyle = '#059669';
+            ctx.shadowColor = '#059669';
+            ctx.shadowBlur = isPlaying ? 5 : 1;
+          } else if (isHovered) {
+            ctx.fillStyle = 'rgba(5, 150, 105, 0.45)';
+            ctx.shadowBlur = 0;
+          } else {
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.22)';
+            ctx.shadowBlur = 0;
+          }
         } else {
-          ctx.fillStyle = 'rgba(57, 255, 20, 0.2)';
-          ctx.shadowBlur = 0;
+          if (isPlayed) {
+            ctx.fillStyle = '#39FF14';
+            ctx.shadowColor = '#39FF14';
+            ctx.shadowBlur = isPlaying ? 6 : 2;
+          } else if (isHovered) {
+            ctx.fillStyle = 'rgba(57, 255, 20, 0.48)';
+            ctx.shadowBlur = 0;
+          } else {
+            ctx.fillStyle = 'rgba(57, 255, 20, 0.2)';
+            ctx.shadowBlur = 0;
+          }
         }
 
         ctx.beginPath();
@@ -151,15 +167,15 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
 
       // Draw active playhead needle
       const playheadX = activeProgress * displayWidth;
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#39FF14';
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = isLightBg ? '#0f172a' : '#ffffff';
+      ctx.shadowColor = isLightBg ? '#059669' : '#39FF14';
+      ctx.shadowBlur = 8;
       ctx.fillRect(Math.max(0, playheadX - 1), 4, 2, displayHeight - 8);
 
       // Top beacon dot
       ctx.beginPath();
       ctx.arc(playheadX, 6, 4, 0, Math.PI * 2);
-      ctx.fillStyle = '#39FF14';
+      ctx.fillStyle = isLightBg ? '#059669' : '#39FF14';
       ctx.fill();
 
       ctx.restore();
@@ -172,7 +188,7 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
       active = false;
       if (animId) cancelAnimationFrame(animId);
     };
-  }, [bars, activeProgress, hoverPercent, isPlaying]);
+  }, [bars, activeProgress, hoverPercent, isPlaying, isLightBg]);
 
   const getPositionFromEvent = useCallback((clientX: number): number => {
     if (!containerRef.current) return 0;
@@ -222,7 +238,7 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
   const remainingTime = Math.max(0, duration - currentDisplayTime);
 
   return (
-    <div className="unified-waveform-wrapper" onClick={(e) => e.stopPropagation()}>
+    <div className={`unified-waveform-wrapper ${isLightBg ? 'is-light-theme' : ''}`} onClick={(e) => e.stopPropagation()}>
       {/* Top Section Times Header (Left: Elapsed, Right: Remaining) */}
       <div className="waveform-top-time-row">
         <div className="waveform-time-tag time-normal">

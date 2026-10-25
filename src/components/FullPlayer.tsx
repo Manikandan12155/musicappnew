@@ -20,7 +20,8 @@ import {
   ListMusic,
   Trash2,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Film
 } from 'lucide-react';
 import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
@@ -60,6 +61,81 @@ export const FullPlayer: React.FC = () => {
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
   const [showTapRipple, setShowTapRipple] = useState<boolean>(false);
+  const [isLightBg, setIsLightBg] = useState<boolean>(false);
+  const [isCanvasActive, setIsCanvasActive] = useState<boolean>(true);
+  const canvasVideoRef = useRef<HTMLVideoElement>(null);
+
+  // Sync native canvas video loop with music playback (Option C)
+  useEffect(() => {
+    if (canvasVideoRef.current) {
+      if (isPlaying) {
+        canvasVideoRef.current.play().catch(() => {});
+      } else {
+        canvasVideoRef.current.pause();
+      }
+    }
+  }, [isPlaying, isCanvasActive]);
+
+  // Dynamic Pic / Background Color Analysis for Automatic Contrast Updates
+  useEffect(() => {
+    if (!currentSong?.coverUrl) {
+      setIsLightBg(false);
+      return;
+    }
+
+    const img = new Image();
+    img.crossOrigin = 'Anonymous';
+    img.src = currentSong.coverUrl;
+
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        ctx.drawImage(img, 0, 0, 32, 32);
+        const data = ctx.getImageData(0, 0, 32, 32).data;
+
+        let totalR = 0;
+        let totalG = 0;
+        let totalB = 0;
+        let count = 0;
+
+        for (let i = 0; i < data.length; i += 4) {
+          totalR += data[i];
+          totalG += data[i + 1];
+          totalB += data[i + 2];
+          count++;
+        }
+
+        const avgR = totalR / count;
+        const avgG = totalG / count;
+        const avgB = totalB / count;
+        const luminance = 0.299 * avgR + 0.587 * avgG + 0.114 * avgB;
+
+        // Sample bottom third specifically where the song title and controls sit
+        let botR = 0, botG = 0, botB = 0, botCount = 0;
+        for (let y = 18; y < 32; y++) {
+          for (let x = 0; x < 32; x++) {
+            const idx = (y * 32 + x) * 4;
+            botR += data[idx];
+            botG += data[idx + 1];
+            botB += data[idx + 2];
+            botCount++;
+          }
+        }
+        const bLum = 0.299 * (botR / botCount) + 0.587 * (botG / botCount) + 0.114 * (botB / botCount);
+
+        // If either overall image or bottom region is bright (> 135)
+        setIsLightBg(luminance > 135 || bLum > 135);
+      } catch {
+        setIsLightBg(false);
+      }
+    };
+    img.onerror = () => setIsLightBg(false);
+  }, [currentSong?.coverUrl]);
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -216,30 +292,33 @@ export const FullPlayer: React.FC = () => {
     : null;
 
     return (
-      <div className={`full-player-overlay mode-${playerMode}`}>
-        {/* Permanent Cinematic Video Background (or Picture fallback if no video) */}
-        {videoId ? (
-          <div className="player-video-background">
-            <iframe
-              className="player-video-iframe"
-              src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoId}&playsinline=1&modestbranding=1&rel=0&iv_load_policy=3&disablekb=1`}
-              title={`${currentSong.title} Video Background`}
-              allow="autoplay; encrypted-media"
+      <div className={`full-player-overlay mode-${playerMode} ${isLightBg ? 'theme-light-bg' : 'theme-dark-bg'}`}>
+        {/* Full-Bleed Native Canvas Video Loop (Option C: Seamless 10s Loop, Zero Glitch) / Picture Fallback */}
+        <div className="player-picture-background">
+          <img
+            src={currentSong.coverUrl}
+            alt=""
+            className="player-picture-ambient-glow"
+          />
+          {isCanvasActive && (currentSong.canvasUrl || '/Vibe.mp4') ? (
+            <video
+              ref={canvasVideoRef}
+              src={currentSong.canvasUrl || '/Vibe.mp4'}
+              autoPlay
+              loop
+              muted
+              playsInline
+              className={`player-canvas-video-main ${isPlaying ? 'video-live' : ''}`}
             />
-            <div className="player-video-vignette" />
-          </div>
-        ) : (
-          <div className="player-picture-background">
+          ) : (
             <img
               src={currentSong.coverUrl}
               alt={currentSong.title}
-              className={`player-picture-backdrop-img ${isPlaying ? 'picture-live' : ''}`}
+              className={`player-picture-main ${isPlaying ? 'picture-live' : ''}`}
             />
-            <div className="cosmic-canvas-aurora" />
-            <div className="cosmic-canvas-dust" />
-            <div className="player-picture-vignette" />
-          </div>
-        )}
+          )}
+          <div className="player-picture-vignette" />
+        </div>
 
       <div className="full-player-container">
         {/* Top Header Bar */}
@@ -259,6 +338,14 @@ export const FullPlayer: React.FC = () => {
           </div>
 
           <div className="player-top-actions">
+            <button
+              className={`player-icon-btn canvas-toggle-btn ${isCanvasActive ? 'active' : ''}`}
+              onClick={() => setIsCanvasActive(prev => !prev)}
+              title={isCanvasActive ? "Switch to Picture Mode" : "Switch to Video Canvas Loop"}
+              aria-label="Toggle Video Canvas Mode"
+            >
+              <Film size={20} />
+            </button>
             <button
               className="player-icon-btn"
               onClick={() => setIsEqualizerOpen(true)}
@@ -425,6 +512,7 @@ export const FullPlayer: React.FC = () => {
                 songId={currentSong.id}
                 songTitle={currentSong.title}
                 isPlaying={isPlaying}
+                isLightBg={isLightBg}
               />
 
               {/* Compact Liquid Glass Tool Capsule: Repeat & Volume (Play/Pause moved to Center Tap) */}

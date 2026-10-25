@@ -1243,38 +1243,9 @@ button, input {
   to { transform: translateY(0); }
 }
 
-/* Dynamic Song Video or Song Picture Background (Full-bleed, 0 impact on audio stream) */
-.player-video-background {
-  position: fixed;
-  inset: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  z-index: 1;
-  pointer-events: none;
-}
-
-.player-video-iframe {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 177.77777778vh; /* 16:9 aspect ratio */
-  min-width: 100%;
-  height: 100%;
-  min-height: 56.25vw;
-  transform: translate(-50%, -50%) scale(1.15);
-  border: none;
-  filter: brightness(0.95) saturate(1.15); /* Significantly reduced dimming, bright and clear */
-  pointer-events: none;
-}
-
-.player-video-vignette {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to bottom, rgba(0, 0, 0, 0.45) 0%, transparent 18%, transparent 72%, rgba(0, 0, 0, 0.65) 100%);
-  pointer-events: none;
-}
-
+/* ==========================================================================
+   FULL-BLEED SONG PICTURE BACKGROUND (Natural Perfect Fit & Ambient Extension)
+   ========================================================================== */
 .player-picture-background {
   position: fixed;
   inset: 0;
@@ -1285,34 +1256,178 @@ button, input {
   pointer-events: none;
 }
 
-.player-picture-backdrop-img {
+/* Ambient liquid blur fills any letterbox area with the picture's exact colors */
+.player-picture-ambient-glow {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 125%;
-  height: 125%;
+  inset: -15%;
+  width: 130%;
+  height: 130%;
   object-fit: cover;
-  transform: translate(-50%, -50%) scale(1.05);
-  filter: blur(32px) brightness(0.48) saturate(1.4);
-  animation: picture-kenburns 22s ease-in-out infinite alternate;
+  filter: blur(55px) brightness(0.7) saturate(1.4);
+  pointer-events: none;
 }
 
-.player-picture-backdrop-img.picture-live {
-  filter: blur(24px) brightness(0.56) saturate(1.5);
+/* Main picture: Fits perfectly across the background without severe over-zoom */
+.player-picture-main {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%; /* Keeps faces/actors in focal view without zoom cutoffs */
+  filter: brightness(0.92) saturate(1.1);
+  transform: scale(1); /* 0 artificial over-zoom */
+  pointer-events: none;
+  transition: filter 0.6s ease;
 }
 
-@keyframes picture-kenburns {
-  0% { transform: translate(-50%, -50%) scale(1.05) rotate(0deg); }
-  50% { transform: translate(-48%, -52%) scale(1.12) rotate(1.2deg); }
-  100% { transform: translate(-52%, -48%) scale(1.18) rotate(-1.2deg); }
+.player-picture-main.picture-live {
+  filter: brightness(0.96) saturate(1.15);
 }
 
+/* Option C: Native HTML5 Looping Canvas Video (Zero YouTube controls, 100% silent & smooth) */
+.player-canvas-video-main {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center 25%;
+  filter: brightness(0.92) saturate(1.18);
+  transform: scale(1);
+  pointer-events: none;
+  transition: filter 0.6s ease, opacity 0.4s ease;
+  z-index: 1;
+}
+
+.player-canvas-video-main.video-live {
+  filter: brightness(0.96) saturate(1.22);
+}
+
+.canvas-toggle-btn.active {
+  background: rgba(0, 208, 32, 0.22) !important;
+  border-color: rgba(0, 208, 32, 0.45) !important;
+  color: #00d020 !important;
+  box-shadow: 0 0 16px rgba(0, 208, 32, 0.35) !important;
+}
+
+/* Adaptive Contrast Vignette Scrim */
 .player-picture-vignette {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at center, rgba(12, 18, 14, 0.3) 0%, rgba(5, 7, 6, 0.88) 100%),
-              linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.2) 50%, rgba(0, 0, 0, 0.7) 100%);
+  background: linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.45) 0%,
+    transparent 16%,
+    transparent 55%,
+    rgba(0, 0, 0, 0.55) 75%,
+    rgba(0, 0, 0, 0.88) 100%
+  );
   pointer-events: none;
+  transition: background 0.5s ease;
+}
+
+/* ==========================================================================
+   DYNAMIC COLOR AUTO-UPDATE THEME (When Picture is Light/White vs Dark)
+   ========================================================================== */
+.theme-light-bg .player-picture-vignette {
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0.5) 0%,
+    transparent 16%,
+    transparent 55%,
+    rgba(255, 255, 255, 0.6) 75%,
+    rgba(255, 255, 255, 0.94) 100%
+  ) !important;
+}
+
+/* Auto-Update Text and UI Colors for Light Backgrounds */
+.theme-light-bg .song-title-main {
+  color: #0b0c10 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9), 0 0 16px rgba(255, 255, 255, 0.95) !important;
+}
+
+.theme-light-bg .song-artist-main {
+  color: #047857 !important;
+  font-weight: 700 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.9) !important;
+}
+
+.theme-light-bg .player-top-eyebrow {
+  color: #475569 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+}
+
+.theme-light-bg .player-top-album {
+  color: #0b0c10 !important;
+  font-weight: 800 !important;
+  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.8) !important;
+}
+
+.theme-light-bg .player-icon-btn {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.22) !important;
+  color: #0b0c10 !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+}
+
+.theme-light-bg .player-nav-tabs {
+  background: rgba(0, 0, 0, 0.08) !important;
+  border-color: rgba(0, 0, 0, 0.18) !important;
+}
+
+.theme-light-bg .player-tab-pill {
+  color: #1e293b !important;
+}
+
+.theme-light-bg .player-tab-pill.active {
+  background: rgba(15, 23, 42, 0.88) !important;
+  color: #ffffff !important;
+}
+
+.theme-light-bg .liquid-swipe-arrow {
+  background: rgba(0, 0, 0, 0.15) !important;
+  border-color: rgba(0, 0, 0, 0.25) !important;
+  color: #0b0c10 !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), inset 0 1px 1px rgba(255, 255, 255, 0.6) !important;
+}
+
+.theme-light-bg .meta-action-btn {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.22) !important;
+  color: #0b0c10 !important;
+}
+
+.theme-light-bg .full-like-btn {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.22) !important;
+  color: #0b0c10 !important;
+}
+
+.theme-light-bg .waveform-top-time-row .waveform-time-tag {
+  background: rgba(0, 0, 0, 0.1) !important;
+  border-color: rgba(0, 0, 0, 0.25) !important;
+  color: #047857 !important;
+}
+
+.theme-light-bg .waveform-top-time-row .waveform-time-tag.time-reverse {
+  color: #0b0c10 !important;
+}
+
+.theme-light-bg .futuristic-control-console.compact-pill {
+  background: rgba(0, 0, 0, 0.12) !important;
+  border-color: rgba(0, 0, 0, 0.22) !important;
+  color: #0b0c10 !important;
+}
+
+.theme-light-bg .console-btn {
+  color: #0b0c10 !important;
+}
+
+.theme-light-bg .center-tap-play-badge {
+  background: rgba(0, 0, 0, 0.25) !important;
+  border-color: rgba(0, 0, 0, 0.35) !important;
+  color: #00d020 !important;
 }
 
 .ambient-backdrop-blur {
