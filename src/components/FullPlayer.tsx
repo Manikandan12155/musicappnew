@@ -300,7 +300,7 @@ export const FullPlayer: React.FC = () => {
         </div>
 
       <div className="full-player-container">
-        {/* Top Header Bar */}
+        {/* Top Header Bar with Unified Liquid Glass Control & Navigation Suite */}
         <div className="player-top-bar">
           <button
             className="player-icon-btn minimize-btn"
@@ -308,114 +308,120 @@ export const FullPlayer: React.FC = () => {
             title="Minimize Player"
             aria-label="Minimize Player"
           >
-            <ChevronDown size={28} />
+            <ChevronDown size={24} />
           </button>
 
-          <div className="player-top-info">
-            <span className="player-top-eyebrow">NOW PLAYING</span>
-          </div>
-
-          <div className="player-top-actions">
-            {/* Liquid Glass Volume Action with Dropdown Popover */}
-            <div className={`top-vol-wrapper ${isVolOpen ? 'open' : ''}`}>
+          <div className="player-top-suite">
+            {/* 4 View Tabs converted into Clean Separate Icons (No Text!) */}
+            <div className="player-views-cluster">
               <button
-                className={`player-icon-btn vol-top-btn ${isMuted || volume === 0 ? 'muted' : ''}`}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsVolOpen(!isVolOpen);
-                }}
-                onDoubleClick={(e) => {
-                  e.stopPropagation();
-                  toggleMute();
-                }}
-                title={isMuted ? 'Volume: Muted (Click for slider)' : `Volume: ${Math.round(volume * 100)}% (Click for slider)`}
-                aria-label="Volume setting"
+                className={`player-icon-btn view-tab-btn ${activePlayerTab === 'player' ? 'active' : ''}`}
+                onClick={() => setActivePlayerTab('player')}
+                title="Cover Player"
+                aria-label="Cover Player"
               >
-                {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
+                <Disc3 size={18} />
               </button>
 
-              {/* Expandable Neon Volume Popover hanging down from top bar */}
-              {isVolOpen && (
-                <div className="top-vol-popover-card" onClick={(e) => e.stopPropagation()}>
-                  <div className="vol-popover-header">
-                    <span>VOLUME</span>
-                    <span className="vol-percent-text">{isMuted ? 'MUTED' : `${Math.round(volume * 100)}%`}</span>
-                  </div>
-                  <div className="vol-popover-slider-row">
-                    <button className="vol-pop-mute-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
-                      {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
-                    </button>
-                    <input
-                      type="range"
-                      min={0}
-                      max={1}
-                      step={0.01}
-                      value={isMuted ? 0 : volume}
-                      onChange={handleVolumeChange}
-                      className="vol-pop-range"
-                      style={{
-                        background: `linear-gradient(to right, #39FF14 ${
-                          (isMuted ? 0 : volume) * 100
-                        }%, rgba(255,255,255,0.18) ${(isMuted ? 0 : volume) * 100}%)`
-                      }}
-                    />
-                  </div>
-                </div>
-              )}
+              <button
+                className={`player-icon-btn view-tab-btn ${activePlayerTab === 'lyrics' ? 'active' : ''}`}
+                onClick={() => setActivePlayerTab('lyrics')}
+                title="Synced Lyrics"
+                aria-label="Synced Lyrics"
+              >
+                <AlignLeft size={18} />
+              </button>
+
+              <button
+                className={`player-icon-btn view-tab-btn ${activePlayerTab === 'dna' ? 'active' : ''}`}
+                onClick={() => setActivePlayerTab('dna')}
+                title="Music DNA"
+                aria-label="Music DNA"
+              >
+                <Dna size={18} />
+              </button>
+
+              <button
+                className={`player-icon-btn view-tab-btn ${activePlayerTab === 'queue' ? 'active' : ''}`}
+                onClick={() => setActivePlayerTab('queue')}
+                title={`Queue (${queue.length})`}
+                aria-label={`Queue (${queue.length})`}
+              >
+                <ListMusic size={18} />
+                {queue.length > 0 && <span className="view-tab-badge">{queue.length}</span>}
+              </button>
             </div>
 
-            <button
-              className="player-icon-btn"
-              onClick={() => setIsEqualizerOpen(true)}
-              title="Open Equalizer"
-              aria-label="Open Equalizer"
-            >
-              <Sliders size={20} />
-            </button>
-            <button
-              className="player-icon-btn"
-              onClick={handleShare}
-              title="Share Track"
-              aria-label="Share Track"
-            >
-              <Share2 size={20} />
-            </button>
+            <div className="top-suite-divider" />
+
+            {/* Quick Action Tools: Volume, Equalizer, Share */}
+            <div className="player-tools-cluster">
+              {/* Liquid Glass Volume Action with Dropdown Popover */}
+              <div className={`top-vol-wrapper ${isVolOpen ? 'open' : ''}`}>
+                <button
+                  className={`player-icon-btn vol-top-btn ${isMuted || volume === 0 ? 'muted' : ''}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setIsVolOpen(!isVolOpen);
+                  }}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    toggleMute();
+                  }}
+                  title={isMuted ? 'Volume: Muted (Click for slider)' : `Volume: ${Math.round(volume * 100)}% (Click for slider)`}
+                  aria-label="Volume setting"
+                >
+                  {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                </button>
+
+                {/* Expandable Neon Volume Popover hanging down from top bar */}
+                {isVolOpen && (
+                  <div className="top-vol-popover-card" onClick={(e) => e.stopPropagation()}>
+                    <div className="vol-popover-header">
+                      <span>VOLUME</span>
+                      <span className="vol-percent-text">{isMuted ? 'MUTED' : `${Math.round(volume * 100)}%`}</span>
+                    </div>
+                    <div className="vol-popover-slider-row">
+                      <button className="vol-pop-mute-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+                        {isMuted || volume === 0 ? <VolumeX size={15} /> : <Volume2 size={15} />}
+                      </button>
+                      <input
+                        type="range"
+                        min={0}
+                        max={1}
+                        step={0.01}
+                        value={isMuted ? 0 : volume}
+                        onChange={handleVolumeChange}
+                        className="vol-pop-range"
+                        style={{
+                          background: `linear-gradient(to right, #39FF14 ${
+                            (isMuted ? 0 : volume) * 100
+                          }%, rgba(255,255,255,0.18) ${(isMuted ? 0 : volume) * 100}%)`
+                        }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              <button
+                className="player-icon-btn"
+                onClick={() => setIsEqualizerOpen(true)}
+                title="Open Equalizer"
+                aria-label="Open Equalizer"
+              >
+                <Sliders size={18} />
+              </button>
+              <button
+                className="player-icon-btn"
+                onClick={handleShare}
+                title="Share Track"
+                aria-label="Share Track"
+              >
+                <Share2 size={18} />
+              </button>
+            </div>
           </div>
-        </div>
-
-        {/* Tab Navigator: Cover Player / Synced Lyrics / Song DNA / Queue */}
-        <div className="player-nav-tabs">
-          <button
-            className={`player-tab-pill ${activePlayerTab === 'player' ? 'active' : ''}`}
-            onClick={() => setActivePlayerTab('player')}
-          >
-            <Disc3 size={16} />
-            <span>Player</span>
-          </button>
-
-          <button
-            className={`player-tab-pill ${activePlayerTab === 'lyrics' ? 'active' : ''}`}
-            onClick={() => setActivePlayerTab('lyrics')}
-          >
-            <AlignLeft size={16} />
-            <span>Synced Lyrics</span>
-          </button>
-
-          <button
-            className={`player-tab-pill ${activePlayerTab === 'dna' ? 'active' : ''}`}
-            onClick={() => setActivePlayerTab('dna')}
-          >
-            <Dna size={16} />
-            <span>Music DNA</span>
-          </button>
-
-          <button
-            className={`player-tab-pill ${activePlayerTab === 'queue' ? 'active' : ''}`}
-            onClick={() => setActivePlayerTab('queue')}
-          >
-            <ListMusic size={16} />
-            <span>Queue ({queue.length})</span>
-          </button>
         </div>
 
         {/* Content Body */}
