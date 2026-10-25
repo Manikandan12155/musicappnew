@@ -2698,21 +2698,47 @@ input:checked + .slider-round:before {
 }
 
 .cat-chip {
-  padding: 6px 14px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 15px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-full);
   color: var(--text-secondary);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 600;
   cursor: pointer;
   white-space: nowrap;
   flex-shrink: 0;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.cat-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  transform: translateY(-1px);
 }
 
 .cat-chip.active {
   background: var(--accent-color);
-  color: #fff;
+  color: #000;
+  font-weight: 700;
+  box-shadow: 0 4px 15px rgba(29, 185, 84, 0.35);
+}
+
+.cat-chip-badge {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 1px 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.cat-chip.active .cat-chip-badge {
+  background: rgba(0, 0, 0, 0.25);
+  color: #000;
 }
 
 .results-count-bar {

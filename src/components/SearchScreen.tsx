@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useMusic } from '../context/MusicContext';
-import { Search, X, Play, Heart, AlignLeft, Music, Loader2, Download, Check, ListPlus } from 'lucide-react';
+import { Search, X, Play, Heart, AlignLeft, Music, Loader2, Download, Check, ListPlus, Shuffle, ListMusic, Sparkles } from 'lucide-react';
 import { Song } from '../types/music';
 import { TrackListSkeleton } from './SkeletonLoader';
 import { offlineStorage } from '../services/offlineStorage';
@@ -16,15 +16,23 @@ export const SearchScreen: React.FC = () => {
     toggleLikeSong,
     searchQuery,
     setSearchQuery,
-    playNext
+    playNext,
+    queue,
+    queueIndex
   } = useMusic();
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [randomSeed, setRandomSeed] = useState<number>(0);
   const [onlineResults, setOnlineResults] = useState<Song[]>([]);
   const [isSearchingOnline, setIsSearchingOnline] = useState<boolean>(false);
   const [enableOnline, setEnableOnline] = useState<boolean>(true);
 
-  const categories = ['All', 'Kollywood', 'Synthwave', 'Mass Beat', 'English Pop', 'Lo-Fi'];
+  const categories = [
+    { id: 'All', label: 'All', icon: Sparkles },
+    { id: 'Fav', label: 'Fav', icon: Heart },
+    { id: 'Next Queue', label: 'Next Queue', icon: ListMusic },
+    { id: 'Random', label: 'Random', icon: Shuffle }
+  ];
 
   const [searchPage, setSearchPage] = useState<number>(1);
   const [isLoadingMoreSearch, setIsLoadingMoreSearch] = useState<boolean>(false);
@@ -133,36 +141,63 @@ export const SearchScreen: React.FC = () => {
 
   const filteredLocalSongs = songs.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
+    if (!q) return true;
+    return (
       s.title.toLowerCase().includes(q) ||
       s.artist.toLowerCase().includes(q) ||
       s.album.toLowerCase().includes(q) ||
       s.genre.toLowerCase().includes(q) ||
-      (s.lyrics && s.lyrics.some((l) => l.text.toLowerCase().includes(q)));
-
-    if (!matchesSearch) return false;
-
-    if (activeCategory === 'All') return true;
-    if (activeCategory === 'Kollywood')
-      return s.genre.toLowerCase().includes('tamil') || s.genre.toLowerCase().includes('kuthu') || s.genre.toLowerCase().includes('folk');
-    if (activeCategory === 'Synthwave')
-      return s.genre.toLowerCase().includes('synth') || s.genre.toLowerCase().includes('retro');
-    if (activeCategory === 'Mass Beat')
-      return s.genre.toLowerCase().includes('mass') || s.genre.toLowerCase().includes('rock');
-    if (activeCategory === 'English Pop')
-      return s.genre.toLowerCase().includes('pop') || s.genre.toLowerCase().includes('r&b') || s.genre.toLowerCase().includes('dance');
-    if (activeCategory === 'Lo-Fi')
-      return s.genre.toLowerCase().includes('lo-fi') || s.genre.toLowerCase().includes('chill');
-
-    return true;
+      (s.lyrics && s.lyrics.some((l) => l.text.toLowerCase().includes(q)))
+    );
   });
 
   // Combine local and online results (avoiding duplicates)
-  const combinedSongs: Song[] = [
+  const allCombinedSongs: Song[] = [
     ...filteredLocalSongs,
     ...onlineResults.filter((os) => !filteredLocalSongs.some((ls) => ls.id === os.id))
   ];
+
+  const shuffledSongs = useMemo(() => {
+    return [...allCombinedSongs].sort(() => Math.random() - 0.5);
+  }, [allCombinedSongs, randomSeed]);
+
+  const displayedSongs: Song[] = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim();
+
+    if (activeCategory === 'Fav') {
+      const allKnown = [...songs, ...onlineResults, ...(currentSong ? [currentSong] : [])];
+      const uniqueMap = new Map<string, Song>();
+      for (const s of allKnown) {
+        if (!uniqueMap.has(s.id)) uniqueMap.set(s.id, s);
+      }
+      const favList = Array.from(uniqueMap.values()).filter((s) => likedSongIds.includes(s.id));
+      if (!q) return favList;
+      return favList.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.artist.toLowerCase().includes(q) ||
+          s.album.toLowerCase().includes(q)
+      );
+    }
+
+    if (activeCategory === 'Next Queue') {
+      const upcoming = queue.slice(queueIndex);
+      const queueList = upcoming.length > 0 ? upcoming : queue;
+      if (!q) return queueList;
+      return queueList.filter(
+        (s) =>
+          s.title.toLowerCase().includes(q) ||
+          s.artist.toLowerCase().includes(q) ||
+          s.album.toLowerCase().includes(q)
+      );
+    }
+
+    if (activeCategory === 'Random') {
+      return shuffledSongs;
+    }
+
+    return allCombinedSongs;
+  }, [activeCategory, allCombinedSongs, songs, onlineResults, currentSong, likedSongIds, queue, queueIndex, searchQuery, shuffledSongs]);
 
   const formatDuration = (secs: number) => {
     if (!secs || isNaN(secs) || secs <= 0) return '';
@@ -200,32 +235,63 @@ export const SearchScreen: React.FC = () => {
                 setOnlineResults([]);
               }}
               title="Clear search"
+              aria-label="Clear search"
             >
               <X size={16} />
             </button>
           ) : null}
         </div>
 
-        {/* Quick filter categories */}
+        {/* Quick filter categories: All, Fav, Next Queue, Random */}
         <div className="search-categories-row">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              className={`cat-chip ${activeCategory === cat ? 'active' : ''}`}
-              onClick={() => setActiveCategory(cat)}
-            >
-              {cat}
-            </button>
-          ))}
+          {categories.map((cat) => {
+            const Icon = cat.icon;
+            const isActive = activeCategory === cat.id;
+            return (
+              <button
+                key={cat.id}
+                className={`cat-chip ${isActive ? 'active' : ''}`}
+                onClick={() => {
+                  if (cat.id === 'Random') {
+                    if (activeCategory === 'Random') {
+                      setRandomSeed((prev) => prev + 1);
+                    } else {
+                      setActiveCategory('Random');
+                    }
+                  } else {
+                    setActiveCategory(cat.id);
+                  }
+                }}
+              >
+                <Icon size={13} fill={cat.id === 'Fav' && isActive ? 'currentColor' : 'none'} />
+                <span>{cat.label}</span>
+                {cat.id === 'Fav' && likedSongIds.length > 0 && (
+                  <span className="cat-chip-badge">{likedSongIds.length}</span>
+                )}
+                {cat.id === 'Next Queue' && queue.length > 0 && (
+                  <span className="cat-chip-badge">{Math.max(0, queue.length - queueIndex)}</span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
 
       {/* Results List */}
       <div className="search-results-section">
         <div className="results-count-bar">
-          <span>Found {combinedSongs.length} tracks</span>
+          <span>Found {displayedSongs.length} tracks</span>
           {searchQuery && <span>matching "{searchQuery}"</span>}
-          {onlineResults.length > 0 && (
+          {activeCategory === 'Fav' && (
+            <span style={{ color: '#ff4d4d', fontWeight: 600 }}>• Favorites</span>
+          )}
+          {activeCategory === 'Next Queue' && (
+            <span style={{ color: '#1db954', fontWeight: 600 }}>• Up Next Queue</span>
+          )}
+          {activeCategory === 'Random' && (
+            <span style={{ color: '#a855f7', fontWeight: 600 }}>• Shuffled Mix</span>
+          )}
+          {activeCategory === 'All' && onlineResults.length > 0 && (
             <span style={{ color: '#39ff14', fontWeight: 700, marginLeft: '6px' }}>
               • {onlineResults.length} from Space Cloud
             </span>
@@ -234,17 +300,35 @@ export const SearchScreen: React.FC = () => {
 
         {isSearchingOnline ? (
           <TrackListSkeleton count={6} />
-        ) : combinedSongs.length === 0 ? (
-          <div className="no-results-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
-            <Music size={44} style={{ color: '#727272', marginBottom: '12px' }} />
-            <h4>No tracks found matching "{searchQuery}"</h4>
-            <p style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>
-              Try searching for "Jailer", "Anirudh", "Starboy", or "Post Malone"
-            </p>
-          </div>
+        ) : displayedSongs.length === 0 ? (
+          activeCategory === 'Fav' ? (
+            <div className="no-results-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <Heart size={44} style={{ color: '#ff4d4d', marginBottom: '12px' }} />
+              <h4>No favorite tracks yet</h4>
+              <p style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>
+                Tap the heart icon on any song to add it to your favorites!
+              </p>
+            </div>
+          ) : activeCategory === 'Next Queue' ? (
+            <div className="no-results-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <ListMusic size={44} style={{ color: '#1db954', marginBottom: '12px' }} />
+              <h4>Queue is currently empty</h4>
+              <p style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>
+                Play a song or use the queue button to add upcoming tracks!
+              </p>
+            </div>
+          ) : (
+            <div className="no-results-box" style={{ textAlign: 'center', padding: '60px 20px' }}>
+              <Music size={44} style={{ color: '#727272', marginBottom: '12px' }} />
+              <h4>No tracks found{searchQuery ? ` matching "${searchQuery}"` : ''}</h4>
+              <p style={{ color: '#a7a7a7', fontSize: '0.85rem' }}>
+                Try searching for "Jailer", "Anirudh", "Starboy", or "Post Malone"
+              </p>
+            </div>
+          )
         ) : (
           <div className="results-track-list">
-            {combinedSongs.map((song, index) => {
+            {displayedSongs.map((song, index) => {
               const isCurrentlyPlaying = currentSong?.id === song.id && isPlaying;
               const isLiked = likedSongIds.includes(song.id);
 
@@ -252,7 +336,7 @@ export const SearchScreen: React.FC = () => {
                 <div
                   key={song.id}
                   className={`track-list-item ${currentSong?.id === song.id ? 'current-active' : ''}`}
-                  onClick={() => playSong(song, combinedSongs)}
+                  onClick={() => playSong(song, displayedSongs)}
                 >
                   <div className="track-index-col">
                     {isCurrentlyPlaying ? (
