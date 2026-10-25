@@ -19,7 +19,10 @@ export const SearchScreen: React.FC = () => {
     setSearchQuery,
     playNext,
     queue,
-    queueIndex
+    queueIndex,
+    loadMoreSongs,
+    isLoadingMore,
+    hasMoreTrending
   } = useMusic();
 
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -116,18 +119,25 @@ export const SearchScreen: React.FC = () => {
       }
     } catch (e) {
       console.warn('Error loading more search tracks:', e);
-      setHasMoreSearch(false);
     } finally {
       setIsLoadingMoreSearch(false);
     }
   };
 
-  // IntersectionObserver for Search Infinite Scroll
+  // IntersectionObserver for Search & Discovery Infinite Scroll
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMoreSearch && !isSearchingOnline) {
-          loadMoreSearchResults();
+        if (!entries[0].isIntersecting) return;
+
+        if (searchQuery.trim().length >= 2) {
+          if (!isLoadingMoreSearch && !isSearchingOnline && hasMoreSearch) {
+            loadMoreSearchResults();
+          }
+        } else {
+          if (!isLoadingMore && hasMoreTrending) {
+            loadMoreSongs();
+          }
         }
       },
       { rootMargin: '350px' }
@@ -138,7 +148,15 @@ export const SearchScreen: React.FC = () => {
     }
 
     return () => observer.disconnect();
-  }, [searchPage, hasMoreSearch, isLoadingMoreSearch, isSearchingOnline, searchQuery]);
+  }, [
+    searchPage,
+    hasMoreSearch,
+    isLoadingMoreSearch,
+    isSearchingOnline,
+    searchQuery,
+    isLoadingMore,
+    hasMoreTrending
+  ]);
 
   const filteredLocalSongs = songs.filter((s) => {
     const q = searchQuery.toLowerCase().trim();
@@ -426,7 +444,7 @@ export const SearchScreen: React.FC = () => {
 
         {/* Endless search results sentinel */}
         <div ref={searchSentinelRef} className="infinite-scroll-sentinel">
-          {isLoadingMoreSearch && (
+          {(isLoadingMoreSearch || isLoadingMore) && (
             <div className="infinite-scroll-loader">
               <Loader2 size={18} className="infinite-scroll-spin" />
               <span>Fetching more tracks...</span>

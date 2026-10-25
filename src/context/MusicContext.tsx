@@ -205,7 +205,6 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     } catch (e) {
       console.warn('Error loading more songs:', e);
-      setHasMoreTrending(false);
     } finally {
       setIsLoadingMore(false);
     }
