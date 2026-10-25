@@ -238,7 +238,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const audio = audioRef.current;
 
     const onTimeUpdate = () => {
-      const cur = audio.currentTime;
+      const cur = audioEngine.getCurrentTime();
       setCurrentTime(cur);
 
       if (currentSong?.lyrics && currentSong.lyrics.length > 0) {
@@ -255,8 +255,9 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
 
     const onLoadedMetadata = () => {
-      if (audio.duration && !isNaN(audio.duration)) {
-        setDuration(audio.duration);
+      const dur = audioEngine.getDuration();
+      if (dur && !isNaN(dur) && dur > 0) {
+        setDuration(dur);
       }
     };
 

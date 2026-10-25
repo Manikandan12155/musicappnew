@@ -21,10 +21,6 @@ const EQ_PRESETS: { name: string; settings: Partial<EqualizerSettings> }[] = [
     settings: { bass: 6, band60: 6, band230: 3, band910: 2, band3600: 5, band14000: 6, virtualizer: 35 }
   },
   {
-    name: 'Bose Acoustic Master 🎧',
-    settings: { bass: 8, band60: 7, band230: 3, band910: 2, band3600: 4, band14000: 7, virtualizer: 60 }
-  },
-  {
     name: '3D Spatial Waves 🎧',
     settings: { bass: 4, band60: 3, band230: 1, band910: 2, band3600: 4, band14000: 5, virtualizer: 85 }
   }

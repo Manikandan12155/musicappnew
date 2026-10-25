@@ -1,6 +1,6 @@
-// Audio Engine with dual-engine architecture:
-// 1. YouTube Iframe Player (hidden, ad-free, 100% keyless, zero IP bans) for all online YouTube tracks.
-// 2. HTML5 Audio + Web Audio API Equalizer for offline downloads & blobs.
+// Dual-Engine Audio Player for Space Music
+// Primary: High-Res HTML5 Stream Pipe
+// Fallback: Client-Side YouTube Player (Zero IP Blocks on Vercel / Cloud)
 
 import { EqualizerSettings } from '../types/music';
 
@@ -13,48 +13,25 @@ class AudioEngine {
   private pannerNode: StereoPannerNode | null = null;
   private isInitialized = false;
 
-  // YouTube Engine state
+  // YouTube fallback engine
   private ytPlayer: any = null;
   private isYtReady = false;
-  private pendingVideoId: string | null = null;
   private isYtActive = false;
   private ytTimeInterval: ReturnType<typeof setInterval> | null = null;
   private currentYtTime = 0;
   private currentYtDuration = 215;
   private activeVideoId: string | null = null;
-  private fallbackAudioUrl: string | null = null;
 
   constructor() {
     this.audio = new Audio();
     this.audio.preload = 'auto';
 
-    const self = this;
-    const proto = HTMLMediaElement.prototype;
-    const originalCurrentTimeDesc = Object.getOwnPropertyDescriptor(proto, 'currentTime');
-    const originalDurationDesc = Object.getOwnPropertyDescriptor(proto, 'duration');
-
-    // Intercept currentTime & duration on this.audio so MusicContext & UI automatically read YouTube state!
-    Object.defineProperty(this.audio, 'currentTime', {
-      get() {
-        if (self.isYtActive) return self.currentYtTime;
-        return originalCurrentTimeDesc?.get?.call(self.audio) || 0;
-      },
-      set(val: number) {
-        if (self.isYtActive) {
-          self.seek(val);
-        } else {
-          originalCurrentTimeDesc?.set?.call(self.audio, val);
-        }
-      },
-      configurable: true
-    });
-
-    Object.defineProperty(this.audio, 'duration', {
-      get() {
-        if (self.isYtActive) return self.currentYtDuration;
-        return originalDurationDesc?.get?.call(self.audio) || 215;
-      },
-      configurable: true
+    // Hook audio error event to auto-fallback to YouTube
+    this.audio.addEventListener('error', () => {
+      if (this.activeVideoId && !this.isYtActive) {
+        console.warn('HTML5 audio error, falling back to YouTube player for:', this.activeVideoId);
+        this.startYouTubeFallback(this.activeVideoId);
+      }
     });
 
     this.initYouTubeIframe();
@@ -112,62 +89,62 @@ class AudioEngine {
       lastNode.connect(this.audioCtx.destination);
       this.isInitialized = true;
     } catch (e) {
-      console.warn('Web Audio API initialization note:', e);
+      console.warn('Web Audio note:', e);
     }
   }
 
   private initYouTubeIframe() {
     if (typeof window === 'undefined') return;
 
-    const setupDomAndApi = () => {
+    const setup = () => {
+      // Create viewport-visible container with tiny size and 0.01 opacity so Chrome doesn't suspend audio
       let anchor = document.getElementById('space-yt-player-host');
       if (!anchor) {
         anchor = document.createElement('div');
         anchor.id = 'space-yt-player-host';
         anchor.style.position = 'fixed';
-        anchor.style.top = '-9999px';
-        anchor.style.left = '-9999px';
+        anchor.style.bottom = '0';
+        anchor.style.right = '0';
         anchor.style.width = '200px';
         anchor.style.height = '200px';
-        anchor.style.opacity = '0';
+        anchor.style.opacity = '0.01';
         anchor.style.pointerEvents = 'none';
-        anchor.style.zIndex = '-9999';
+        anchor.style.zIndex = '1';
         document.body.appendChild(anchor);
       }
 
       const win = window as any;
       if (win.YT && win.YT.Player) {
-        this.setupPlayer();
+        this.createYtPlayer();
       } else {
-        const prevOnReady = win.onYouTubeIframeAPIReady;
+        const prev = win.onYouTubeIframeAPIReady;
         win.onYouTubeIframeAPIReady = () => {
-          if (prevOnReady) prevOnReady();
-          this.setupPlayer();
+          if (prev) prev();
+          this.createYtPlayer();
         };
 
         if (!document.getElementById('yt-iframe-api-script')) {
-          const tag = document.createElement('script');
-          tag.id = 'yt-iframe-api-script';
-          tag.src = 'https://www.youtube.com/iframe_api';
-          document.head.appendChild(tag);
+          const script = document.createElement('script');
+          script.id = 'yt-iframe-api-script';
+          script.src = 'https://www.youtube.com/iframe_api';
+          document.head.appendChild(script);
         }
       }
     };
 
     if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', setupDomAndApi);
+      document.addEventListener('DOMContentLoaded', setup);
     } else {
-      setupDomAndApi();
+      setup();
     }
   }
 
-  private setupPlayer() {
+  private createYtPlayer() {
     const win = window as any;
-    const YT = win.YT;
-    if (!YT || !YT.Player) return;
+    if (!win.YT || !win.YT.Player) return;
 
     try {
-      this.ytPlayer = new YT.Player('space-yt-player-host', {
+      this.ytPlayer = new win.YT.Player('space-yt-player-host', {
         height: '200',
         width: '200',
         playerVars: {
@@ -175,90 +152,70 @@ class AudioEngine {
           controls: 0,
           disablekb: 1,
           fs: 0,
-          modestbranding: 1,
           playsinline: 1,
           rel: 0
         },
         events: {
           onReady: () => {
             this.isYtReady = true;
-            if (this.pendingVideoId) {
-              const vid = this.pendingVideoId;
-              this.pendingVideoId = null;
-              this.playYouTube(vid);
+            if (this.isYtActive && this.activeVideoId) {
+              this.ytPlayer.loadVideoById(this.activeVideoId);
+              this.ytPlayer.playVideo();
             }
           },
           onStateChange: (event: any) => {
-            // YT.PlayerState: PLAYING=1, PAUSED=2, ENDED=0, BUFFERING=3
+            // PLAYING = 1, PAUSED = 2, ENDED = 0
             if (event.data === 1) {
-              this.startTimeTicker();
+              this.startYtTicker();
               this.audio.dispatchEvent(new Event('play'));
               this.audio.dispatchEvent(new Event('loadedmetadata'));
             } else if (event.data === 2) {
-              this.stopTimeTicker();
+              this.stopYtTicker();
               this.audio.dispatchEvent(new Event('pause'));
             } else if (event.data === 0) {
-              this.stopTimeTicker();
+              this.stopYtTicker();
               this.audio.dispatchEvent(new Event('ended'));
             }
-          },
-          onError: (err: any) => {
-            console.warn('YouTube Iframe Player error:', err.data);
-            this.fallbackToDirectStream();
           }
         }
       });
     } catch (e) {
-      console.warn('YT.Player init warning:', e);
+      console.warn('YT player create warning:', e);
     }
   }
 
-  private startTimeTicker() {
-    this.stopTimeTicker();
+  private startYtTicker() {
+    this.stopYtTicker();
     this.ytTimeInterval = setInterval(() => {
       if (this.ytPlayer && typeof this.ytPlayer.getCurrentTime === 'function') {
-        const cur = this.ytPlayer.getCurrentTime() || 0;
-        const dur = this.ytPlayer.getDuration() || this.currentYtDuration;
-        this.currentYtTime = cur;
-        if (dur && isFinite(dur) && dur > 0) {
-          this.currentYtDuration = dur;
-        }
+        this.currentYtTime = this.ytPlayer.getCurrentTime() || 0;
+        const d = this.ytPlayer.getDuration() || this.currentYtDuration;
+        if (d && isFinite(d) && d > 0) this.currentYtDuration = d;
         this.audio.dispatchEvent(new Event('timeupdate'));
       }
     }, 250);
   }
 
-  private stopTimeTicker() {
+  private stopYtTicker() {
     if (this.ytTimeInterval) {
       clearInterval(this.ytTimeInterval);
       this.ytTimeInterval = null;
     }
   }
 
-  private playYouTube(videoId: string) {
+  private startYouTubeFallback(videoId: string) {
+    this.isYtActive = true;
     this.activeVideoId = videoId;
-    if (!this.isYtReady || !this.ytPlayer) {
-      this.pendingVideoId = videoId;
-      return;
-    }
+    this.audio.pause();
 
-    try {
-      this.ytPlayer.loadVideoById(videoId);
-      this.ytPlayer.playVideo();
-    } catch (e) {
-      console.warn('YT loadVideoById warning:', e);
-      this.fallbackToDirectStream();
+    if (this.isYtReady && this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
+      try {
+        this.ytPlayer.loadVideoById(videoId);
+        this.ytPlayer.playVideo();
+      } catch (e) {
+        console.warn('Failed to start YT fallback:', e);
+      }
     }
-  }
-
-  private fallbackToDirectStream() {
-    if (!this.fallbackAudioUrl) return;
-    console.log('Falling back to direct HTML5 audio stream:', this.fallbackAudioUrl);
-    this.isYtActive = false;
-    this.stopTimeTicker();
-    this.audio.src = this.fallbackAudioUrl;
-    this.audio.load();
-    this.audio.play().catch(() => {});
   }
 
   public applyEqualizer(settings: EqualizerSettings) {
@@ -287,44 +244,32 @@ class AudioEngine {
     }
   }
 
-  /**
-   * Main unified Play method:
-   * Accepts audioUrl and optional videoId.
-   * If videoId is provided and valid, routes via YouTube Iframe Engine (zero IP blocks).
-   * Otherwise routes via native HTML5 Audio (offline blobs, custom URLs).
-   */
   public async play(url?: string, videoId?: string): Promise<void> {
-    // If called with no arguments, resume current active player
+    // If called with no arguments, resume whichever player is active
     if (!url && !videoId) {
       if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
         this.ytPlayer.playVideo();
-        this.startTimeTicker();
+        this.startYtTicker();
         this.audio.dispatchEvent(new Event('play'));
         return;
       }
       return this.audio.play();
     }
 
-    this.fallbackAudioUrl = url || null;
+    // Extract videoId if available
+    const vid = videoId && videoId.length === 11 ? videoId : (url && url.includes('/api/stream/') ? url.split('/api/stream/')[1].split('?')[0] : null);
+    this.activeVideoId = vid;
 
-    // Check if videoId or url has a YouTube 11-char ID
-    const validVideoId = videoId && videoId.length === 11 && !videoId.includes('/')
-      ? videoId
-      : (url && url.includes('/api/stream/') ? url.split('/api/stream/')[1].split('?')[0] : null);
-
-    const isBlobOrDirect = url && (url.startsWith('blob:') || url.startsWith('data:'));
-
-    if (validVideoId && !isBlobOrDirect) {
-      this.isYtActive = true;
-      this.currentYtTime = 0;
-      this.audio.pause(); // Pause HTML5 audio
-      this.playYouTube(validVideoId);
+    // If running on Vercel (where backend stream doesn't exist), directly use YouTube fallback
+    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
+    if (isVercel && vid && (!url || !url.startsWith('blob:'))) {
+      this.startYouTubeFallback(vid);
       return;
     }
 
-    // Standard HTML5 Audio mode
+    // Otherwise, use native HTML5 Audio stream
     this.isYtActive = false;
-    this.stopTimeTicker();
+    this.stopYtTicker();
     if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
       try { this.ytPlayer.pauseVideo(); } catch {}
     }
@@ -345,13 +290,23 @@ class AudioEngine {
       }
     }
 
-    return this.audio.play();
+    try {
+      await this.audio.play();
+    } catch (err) {
+      // If audio.play() fails and we have a video ID, trigger YouTube fallback!
+      if (vid) {
+        console.warn('HTML5 audio play rejected, activating YouTube player fallback:', err);
+        this.startYouTubeFallback(vid);
+      } else {
+        throw err;
+      }
+    }
   }
 
   public pause(): void {
     if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
       this.ytPlayer.pauseVideo();
-      this.stopTimeTicker();
+      this.stopYtTicker();
       this.audio.dispatchEvent(new Event('pause'));
     } else {
       this.audio.pause();
@@ -377,6 +332,16 @@ class AudioEngine {
         this.ytPlayer.setVolume(Math.round(clamped * 100));
       } catch {}
     }
+  }
+
+  public getCurrentTime(): number {
+    if (this.isYtActive) return this.currentYtTime;
+    return this.audio.currentTime || 0;
+  }
+
+  public getDuration(): number {
+    if (this.isYtActive) return this.currentYtDuration;
+    return this.audio.duration || 215;
   }
 }
 
