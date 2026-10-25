@@ -23,8 +23,34 @@ const QUICK_VIBES = [
 ];
 
 export const HomeScreen: React.FC = () => {
-  const { setActiveScreen, setSelectedGenre, setSearchQuery } = useMusic();
+  const {
+    setActiveScreen,
+    setSelectedGenre,
+    setSearchQuery,
+    equalizer,
+    updateEqualizer,
+    setIsEqualizerOpen
+  } = useMusic();
   const [searchInput, setSearchInput] = useState('');
+
+  const isBoseActive = equalizer?.enabled && equalizer.bass >= 7 && equalizer.virtualizer >= 50;
+
+  const handleActivateBoseDsp = () => {
+    if (isBoseActive) {
+      setIsEqualizerOpen(true);
+    } else {
+      updateEqualizer({
+        enabled: true,
+        bass: 8,
+        band60: 7,
+        band230: 3,
+        band910: 2,
+        band3600: 4,
+        band14000: 7,
+        virtualizer: 60
+      });
+    }
+  };
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,7 +139,62 @@ export const HomeScreen: React.FC = () => {
         </div>
       </section>
 
-      {/* 2. Feature Highlights Showcase */}
+      {/* 2. Sound by Bose Liquid Titanium 3D Acoustic Showcase */}
+      <section className="bose-showcase-wrapper" style={{ padding: '0 24px' }}>
+        <div className="bose-3d-showcase-card">
+          <div className="bose-card-backdrop" />
+
+          {/* Left 3D Earbud - Master Buds Open (Front Angle) */}
+          <div className="bose-earbud-stage-left">
+            <div className="bose-3d-bud-left">
+              <div className="bose-earhook-loop" />
+              <div className="bose-base-pod" />
+              <div className="bose-chrome-orb-main">
+                <div className="bose-orb-specular" />
+                <div className="bose-orb-secondary-sheen" />
+                <div className="bose-acoustic-speaker-grille" />
+              </div>
+            </div>
+          </div>
+
+          {/* Center Brand Identity & Acoustic Tuning */}
+          <div className="bose-center-branding">
+            <span className="bose-sound-by-label">SOUND BY</span>
+            <div className="bose-title-row">
+              <div className="bose-bar-left" />
+              <h2 className="bose-primary-logo-text">BOSE</h2>
+              <div className="bose-bar-right" />
+            </div>
+            <p className="bose-acoustic-desc">
+              Master Buds Open with Sound by Bose technology delivers balanced, distortion-free audio with deep bass, clear mids, and crisp highs.
+            </p>
+            <div className="bose-action-pills-row">
+              <button
+                className="bose-activate-btn"
+                onClick={handleActivateBoseDsp}
+              >
+                <Sliders size={15} />
+                <span>{isBoseActive ? 'Bose DSP: Active 🎧' : 'Activate Bose Acoustic DSP'}</span>
+              </button>
+              <div className="bose-status-pill">
+                <span className="bose-pulse-led" />
+                <span>3D Spatial Radar</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Right 3D Earbud - Master Buds Open (Rear Perspective Pair) */}
+          <div className="bose-earbud-stage-right">
+            <div className="bose-3d-bud-right">
+              <div className="bose-earhook-loop-right" />
+              <div className="bose-chrome-orb-pair-1" />
+              <div className="bose-chrome-orb-pair-2" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. Feature Highlights Showcase */}
       <section className="landing-features-section">
         <div className="landing-section-header">
           <span className="landing-kicker">ENGINE CAPABILITIES</span>

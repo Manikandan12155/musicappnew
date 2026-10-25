@@ -32,6 +32,29 @@
   --shadow-glass: 0 16px 36px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.08);
   --shadow-elevation: 0 20px 40px -10px rgba(0, 0, 0, 0.9);
   --blur-glass: blur(24px) saturate(190%);
+
+  /* ==========================================================================
+     BOSE 3D LIQUID TITANIUM & CHROME ACOUSTIC DESIGN SYSTEM
+     Inspired by Sound by Bose Master Buds Open (Hyper-Reflective Metallic 3D)
+     ========================================================================== */
+  --bose-specular: #ffffff;
+  --bose-sheen-light: #f0f4fa;
+  --bose-platinum: #d5dbe6;
+  --bose-chrome-mid: #788294;
+  --bose-titanium-slate: #3b4252;
+  --bose-gunmetal-dark: #1e222b;
+  --bose-obsidian-deep: #0c0e12;
+  --bose-acoustic-black: #060709;
+
+  /* 3D Liquid Metallic Gradients */
+  --bose-grad-sphere: radial-gradient(circle at 32% 28%, #ffffff 0%, #e2e8f2 16%, #838e9f 45%, #2d3340 76%, #0d0f14 100%);
+  --bose-grad-liquid-chrome: linear-gradient(135deg, #ffffff 0%, #ccd4e2 18%, #4f5869 48%, #8e99ac 72%, #1b1e26 100%);
+  --bose-grad-metal-bar: linear-gradient(90deg, #1b1e26 0%, #5d677a 25%, #ffffff 50%, #5d677a 75%, #1b1e26 100%);
+  --bose-grad-rim-light: linear-gradient(to bottom, rgba(255, 255, 255, 0.75) 0%, rgba(255, 255, 255, 0.1) 50%, rgba(0, 0, 0, 0.6) 100%);
+
+  /* 3D Depth Shadows */
+  --bose-3d-shadow: 0 28px 65px -15px rgba(0, 0, 0, 0.75), 0 10px 24px -6px rgba(18, 22, 30, 0.55), inset 0 2px 3px rgba(255, 255, 255, 0.6), inset 0 -4px 8px rgba(0, 0, 0, 0.7);
+  --bose-card-shadow: 0 35px 80px -20px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.15);
 }
 
 /* Material You Theme Override */
@@ -5492,6 +5515,350 @@ input:checked + .slider-round:before {
 @keyframes toast-drop {
   0% { opacity: 0; transform: translate(-50%, -15px) scale(0.95); }
   100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+
+/* ==========================================================================
+   BOSE 3D LIQUID TITANIUM ACOUSTIC SHOWCASE & 3D HARDWARE EFFECTS
+   ========================================================================== */
+
+/* 1. Main Bose 3D Showcase Card Banner */
+.bose-3d-showcase-card {
+  position: relative;
+  width: 100%;
+  margin: 28px 0 32px;
+  padding: 44px 32px;
+  background: #ffffff;
+  border-radius: 28px;
+  overflow: hidden;
+  box-shadow: 0 30px 80px -15px rgba(0, 0, 0, 0.45), 0 10px 25px rgba(0, 0, 0, 0.15);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 240px;
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.35s ease;
+  user-select: none;
+}
+
+.bose-3d-showcase-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 40px 95px -15px rgba(0, 0, 0, 0.55), 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+/* Background Subtle Radial Gradient on Card */
+.bose-card-backdrop {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 50% 50%, rgba(245, 248, 252, 1) 0%, rgba(235, 240, 248, 0.8) 70%, rgba(220, 226, 238, 0.9) 100%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Center Branding & Audio Specs */
+.bose-center-branding {
+  position: relative;
+  z-index: 3;
+  text-align: center;
+  max-width: 480px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.bose-sound-by-label {
+  display: inline-block;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 900;
+  font-style: italic;
+  font-size: 1.15rem;
+  letter-spacing: 0.14em;
+  color: #0b0d11;
+  text-transform: uppercase;
+  margin-bottom: 2px;
+}
+
+.bose-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.bose-bar-left, .bose-bar-right {
+  height: 4px;
+  width: 44px;
+  background: #0b0d11;
+  border-radius: 2px;
+}
+
+.bose-primary-logo-text {
+  font-family: 'Outfit', sans-serif;
+  font-size: 2.35rem;
+  font-weight: 950;
+  font-style: italic;
+  letter-spacing: 0.08em;
+  color: #08090c;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+.bose-acoustic-desc {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: #4f5666;
+  font-weight: 500;
+  margin-bottom: 20px;
+}
+
+.bose-action-pills-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.bose-activate-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 22px;
+  background: linear-gradient(135deg, #181b22 0%, #2b313d 50%, #0d0f13 100%);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  transition: all 0.25s ease;
+}
+
+.bose-activate-btn:hover {
+  transform: scale(1.04);
+  background: linear-gradient(135deg, #242934 0%, #3e4657 50%, #151820 100%);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.bose-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  background: rgba(24, 27, 34, 0.08);
+  border: 1px solid rgba(24, 27, 34, 0.15);
+  border-radius: var(--radius-full);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e222b;
+}
+
+.bose-pulse-led {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #1db954;
+  box-shadow: 0 0 10px #1db954;
+  animation: bose-pulse 1.8s infinite;
+}
+
+@keyframes bose-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.85); }
+}
+
+/* 2. Pure CSS 3D Liquid Titanium Spherical Earbuds */
+.bose-earbud-stage-left,
+.bose-earbud-stage-right {
+  position: relative;
+  z-index: 2;
+  width: 170px;
+  height: 180px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Earbud Left: Master Buds Open (Frontal/Oblique 3D Angle) */
+.bose-3d-bud-left {
+  position: relative;
+  width: 140px;
+  height: 160px;
+  animation: boseFloatLeft 5s ease-in-out infinite alternate;
+}
+
+/* Outer Curved Silicone Earhook */
+.bose-earhook-loop {
+  position: absolute;
+  top: 0;
+  left: 12px;
+  width: 90px;
+  height: 140px;
+  border: 24px solid transparent;
+  border-top-color: #2b2f38;
+  border-left-color: #1c2027;
+  border-radius: 50px 50px 0 50px;
+  transform: rotate(-15deg);
+  box-shadow: -8px 16px 30px rgba(0, 0, 0, 0.45), inset 0 2px 4px rgba(255, 255, 255, 0.25);
+  z-index: 1;
+}
+
+/* Hyper-Reflective Liquid Titanium Spherical Acoustic Driver */
+.bose-chrome-orb-main {
+  position: absolute;
+  top: 24px;
+  right: 6px;
+  width: 94px;
+  height: 94px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 36% 28%, #ffffff 0%, #e6edf7 16%, #8a96a8 42%, #323946 72%, #0e1116 100%);
+  box-shadow: 0 24px 45px -8px rgba(0, 0, 0, 0.65), 0 8px 18px rgba(20, 24, 32, 0.4), inset 0 2px 3px #ffffff, inset 0 -6px 12px #0a0c10;
+  z-index: 3;
+  overflow: hidden;
+}
+
+/* Gloss Specular Sheen Reflection */
+.bose-orb-specular {
+  position: absolute;
+  top: 10px;
+  left: 18px;
+  width: 48px;
+  height: 34px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+  transform: rotate(-25deg);
+  pointer-events: none;
+}
+
+/* Secondary Lower Chrome Reflection */
+.bose-orb-secondary-sheen {
+  position: absolute;
+  bottom: 8px;
+  right: 14px;
+  width: 42px;
+  height: 20px;
+  border-radius: 50%;
+  background: radial-gradient(ellipse at center, rgba(195, 207, 226, 0.6) 0%, transparent 80%);
+  pointer-events: none;
+}
+
+/* Bose Precision Acoustic Speaker Grille (Micro-Perforated) */
+.bose-acoustic-speaker-grille {
+  position: absolute;
+  bottom: 12px;
+  left: 20px;
+  width: 44px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: #12151b;
+  background-image: radial-gradient(#08090c 1.5px, transparent 1.5px);
+  background-size: 5px 5px;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.8), 0 1px 2px rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: rotate(-10deg);
+}
+
+/* Base Counter-Weight Pod with Ambient Reflection */
+.bose-base-pod {
+  position: absolute;
+  bottom: 8px;
+  left: 10px;
+  width: 86px;
+  height: 70px;
+  border-radius: 46% 54% 50% 50% / 40% 40% 60% 60%;
+  background: radial-gradient(circle at 40% 30%, #ffffff 0%, #ccd5e3 14%, #6e798a 46%, #252b36 78%, #0d0f14 100%);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.5), inset 0 1px 2px rgba(255, 255, 255, 0.5);
+  z-index: 2;
+}
+
+/* Right Earbud: Angled Rear Perspective with Dual 3D Spheres */
+.bose-3d-bud-right {
+  position: relative;
+  width: 140px;
+  height: 160px;
+  animation: boseFloatRight 5.5s ease-in-out infinite alternate;
+}
+
+.bose-earhook-loop-right {
+  position: absolute;
+  bottom: 4px;
+  right: 18px;
+  width: 90px;
+  height: 90px;
+  border: 24px solid transparent;
+  border-bottom-color: #2b2f38;
+  border-right-color: #1c2027;
+  border-radius: 50px;
+  transform: rotate(35deg);
+  box-shadow: 8px 18px 32px rgba(0, 0, 0, 0.45);
+  z-index: 1;
+}
+
+.bose-chrome-orb-pair-1 {
+  position: absolute;
+  top: 36px;
+  left: 12px;
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 25%, #ffffff 0%, #e0e7f2 18%, #798597 45%, #252a34 76%, #0b0d11 100%);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), inset 0 2px 3px #ffffff, inset 0 -4px 8px #08090c;
+  z-index: 3;
+}
+
+.bose-chrome-orb-pair-2 {
+  position: absolute;
+  top: 20px;
+  right: 10px;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 45% 30%, #ffffff 0%, #d8e1ee 16%, #687385 45%, #1e232d 78%, #090b0e 100%);
+  box-shadow: -10px 18px 36px rgba(0, 0, 0, 0.55), inset 0 2px 3px #ffffff;
+  z-index: 2;
+}
+
+/* Floating Animations */
+@keyframes boseFloatLeft {
+  0% { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(-10px) rotate(-3deg); }
+}
+
+@keyframes boseFloatRight {
+  0% { transform: translateY(0px) rotate(0deg); }
+  100% { transform: translateY(-12px) rotate(3deg); }
+}
+
+/* 3. Liquid Titanium Mode for Vinyl Center & Turntable */
+.vinyl-record-disc.titanium-edition {
+  background: radial-gradient(circle at 50% 50%, #151820 0%, #0d0f14 45%, #050608 100%);
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.95), 0 0 0 1px rgba(255, 255, 255, 0.15), 0 0 45px rgba(220, 230, 245, 0.12);
+}
+
+.vinyl-center-label.titanium-center {
+  background: radial-gradient(circle at 38% 32%, #ffffff 0%, #dbe2ee 15%, #768193 45%, #232832 75%, #0c0e12 100%) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8), inset 0 2px 4px #ffffff, inset 0 -4px 8px #07080b !important;
+  border: 2px solid rgba(255, 255, 255, 0.35) !important;
+}
+
+/* 4. Responsive adjustments for Bose Showcase */
+@media (max-width: 860px) {
+  .bose-3d-showcase-card {
+    flex-direction: column;
+    padding: 32px 20px;
+    gap: 24px;
+    text-align: center;
+  }
+
+  .bose-earbud-stage-left,
+  .bose-earbud-stage-right {
+    transform: scale(0.85);
+  }
+
+  .bose-primary-logo-text {
+    font-size: 1.9rem;
+  }
 }
 
 
