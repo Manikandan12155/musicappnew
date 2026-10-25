@@ -11,7 +11,6 @@ export interface Song {
   album: string;
   duration: number; // in seconds
   coverUrl: string;
-  canvasUrl?: string;
   audioUrl: string;
   genre: string;
   year?: number;
