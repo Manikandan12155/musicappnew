@@ -483,61 +483,93 @@ app.get('/api/download/:videoId', async (req: Request, res: Response) => {
   }
 });
 
-// 5. Synced Lyrics API (LRCLIB Integration — Synced with timestamps)
+// 5. Synced Lyrics API (Multi-Strategy LRCLIB Search with Primary Artist Fallback)
 app.get('/api/lyrics', async (req: Request, res: Response) => {
   try {
     const { title, artist } = req.query as { title?: string; artist?: string };
     if (!title) return res.status(400).json({ error: 'Title is required' });
 
+    // Remove fluff like (From "Movie"), [Official], etc.
     const cleanTitle = title
-      .replace(/\([^)]*\)/g, '')
-      .replace(/\[[^\]]*\]/g, '')
+      .replace(/\s*\(From\s+[^)]+\)/gi, '')
+      .replace(/\s*\[[^\]]+\]/gi, '')
+      .replace(/\s*\([^)]*\)/gi, '')
       .replace(/ft\..*/i, '')
       .replace(/feat\..*/i, '')
       .trim();
 
-    const cleanArtist = (artist || '')
+    // Extract primary singer/composer (e.g. "Anirudh Ravichander" from "Anirudh Ravichander, Vishal Dadlani & Yugabharathi")
+    const primaryArtist = (artist || '')
+      .split(/[,&]/)[0]
       .replace(/VEVO/i, '')
       .replace(/Official/i, '')
       .replace(/Topic/i, '')
       .trim();
 
-    const url = `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}${
-      cleanArtist ? `&artist_name=${encodeURIComponent(cleanArtist)}` : ''
-    }`;
+    // Cascading retrieval strategies:
+    const attempts = [
+      { type: 'get', url: `https://lrclib.net/api/get?track_name=${encodeURIComponent(cleanTitle)}&artist_name=${encodeURIComponent(primaryArtist)}` },
+      { type: 'search', url: `https://lrclib.net/api/search?q=${encodeURIComponent(`${cleanTitle} ${primaryArtist}`)}` },
+      { type: 'search', url: `https://lrclib.net/api/search?q=${encodeURIComponent(cleanTitle)}` }
+    ];
 
-    const lyricsRes = await fetch(url, {
-      headers: {
-        'User-Agent': 'SpaceMusicWebPlayer/2.0'
+    let matchedData: { syncedLyrics?: string; plainLyrics?: string } | null = null;
+
+    for (const att of attempts) {
+      try {
+        const lyricsRes = await fetch(att.url, {
+          headers: {
+            'User-Agent': 'SpaceMusicWebPlayer/2.0'
+          }
+        });
+
+        if (!lyricsRes.ok) continue;
+
+        const resJson: any = await lyricsRes.json();
+        if (att.type === 'get' && resJson) {
+          if (resJson.syncedLyrics || resJson.plainLyrics) {
+            matchedData = resJson;
+            break;
+          }
+        } else if (att.type === 'search' && Array.isArray(resJson) && resJson.length > 0) {
+          // Prioritize search result with synced timestamps
+          const best = resJson.find((it: any) => it.syncedLyrics) || resJson[0];
+          if (best && (best.syncedLyrics || best.plainLyrics)) {
+            matchedData = best;
+            break;
+          }
+        }
+      } catch {
+        // try next fallback attempt
       }
-    });
+    }
 
-    if (!lyricsRes.ok) {
+    if (!matchedData || (!matchedData.syncedLyrics && !matchedData.plainLyrics)) {
       return res.status(404).json({ error: 'No synced lyrics found' });
     }
 
-    const data = (await lyricsRes.json()) as { syncedLyrics?: string; plainLyrics?: string };
-    if (!data.syncedLyrics) {
-      return res.json({ lyrics: [], plain: data.plainLyrics || '' });
-    }
-
-    const lines = data.syncedLyrics.split('\n');
     const parsedLines: Array<{ time: number; text: string }> = [];
 
-    for (const line of lines) {
-      const match = line.match(/\[(\d{2}):(\d{2}(?:\.\d+)?)\](.*)/);
-      if (match) {
-        const minutes = parseInt(match[1]);
-        const seconds = parseFloat(match[2]);
-        const time = Math.round((minutes * 60 + seconds) * 10) / 10;
-        const text = match[3].trim();
-        if (text) {
-          parsedLines.push({ time, text });
+    if (matchedData.syncedLyrics) {
+      const lines = matchedData.syncedLyrics.split('\n');
+      for (const line of lines) {
+        const match = line.match(/\[(\d{2}):(\d{2}(?:\.\d+)?)\](.*)/);
+        if (match) {
+          const minutes = parseInt(match[1]);
+          const seconds = parseFloat(match[2]);
+          const time = Math.round((minutes * 60 + seconds) * 10) / 10;
+          const text = match[3].trim();
+          if (text) {
+            parsedLines.push({ time, text });
+          }
         }
       }
     }
 
-    return res.json({ lyrics: parsedLines, plain: data.plainLyrics });
+    return res.json({
+      lyrics: parsedLines,
+      plain: matchedData.plainLyrics || ''
+    });
   } catch (error: any) {
     console.error('Lyrics error:', error);
     return res.status(500).json({ error: 'Failed to fetch lyrics' });

@@ -2764,6 +2764,77 @@ button, input {
   word-break: break-word;
 }
 
+.no-lyrics-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 280px;
+  text-align: center;
+  padding: 30px 20px;
+  background: rgba(255, 255, 255, 0.03);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-radius: var(--radius-lg, 16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.no-lyrics-icon {
+  color: var(--accent-color, #ff4b2b);
+  opacity: 0.6;
+  margin-bottom: 16px;
+  filter: drop-shadow(0 0 16px var(--accent-glow, rgba(255, 75, 43, 0.3)));
+}
+
+.lyrics-loading-spinner {
+  animation: spin 1s linear infinite;
+  color: var(--accent-color, #ff4b2b);
+  margin-bottom: 16px;
+}
+
+.no-lyrics-container h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+}
+
+.no-lyrics-container p {
+  font-size: 0.88rem;
+  color: var(--text-secondary, rgba(255, 255, 255, 0.6));
+  max-width: 320px;
+  margin-bottom: 20px;
+  line-height: 1.4;
+}
+
+.lyrics-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--glass-border, rgba(255, 255, 255, 0.15));
+  border-radius: var(--radius-full, 9999px);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  backdrop-filter: blur(8px);
+}
+
+.lyrics-retry-btn:hover {
+  background: var(--accent-color, #ff4b2b);
+  border-color: var(--accent-color, #ff4b2b);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px var(--accent-glow, rgba(255, 75, 43, 0.4));
+}
+
+.lyrics-retry-btn:active {
+  transform: translateY(0);
+}
+
 /* Song DNA */
 .song-dna-container {
   display: flex;

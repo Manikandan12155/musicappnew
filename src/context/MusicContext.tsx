@@ -57,6 +57,7 @@ interface MusicContextType {
   clearQueue: () => void;
   setIsQueueOpen: (open: boolean) => void;
   showToast: (msg: string) => void;
+  fetchLyricsForSong: (song: Song) => Promise<void>;
 }
 
 const defaultEqualizer: EqualizerSettings = {
@@ -304,9 +305,17 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     try {
       const res = await fetch(apiUrl(`/api/lyrics?title=${encodeURIComponent(song.title)}&artist=${encodeURIComponent(song.artist)}`));
       if (res.ok) {
-        const data = (await res.json()) as { lyrics?: LyricLine[] };
+        const data = (await res.json()) as { lyrics?: LyricLine[]; plain?: string };
         if (data.lyrics && data.lyrics.length > 0) {
           setCurrentSong((prev) => (prev && prev.id === song.id ? { ...prev, lyrics: data.lyrics } : prev));
+        } else if (data.plain) {
+          // If plain lyrics available, create readable spaced lines
+          const plainLines: LyricLine[] = data.plain
+            .split('\n')
+            .map((t: string) => t.trim())
+            .filter(Boolean)
+            .map((text: string, i: number) => ({ time: i * 4.5, text }));
+          setCurrentSong((prev) => (prev && prev.id === song.id ? { ...prev, lyrics: plainLines } : prev));
         }
       }
     } catch {
@@ -533,7 +542,8 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         isQueueOpen,
         setIsQueueOpen,
         toastMessage,
-        showToast
+        showToast,
+        fetchLyricsForSong
       }}
     >
       {children}
