@@ -1635,20 +1635,11 @@ button, input {
   transform: translateY(-50%) scale(0.92);
 }
 
-/* Pure Liquid Glass Artwork Card (Zero Black Letterboxing) */
-.artwork-glass-card {
-  position: relative;
-  width: min(72vw, 290px);
-  height: min(72vw, 290px);
-  aspect-ratio: 1;
-  border-radius: 26px;
-  overflow: hidden;
-  background: transparent;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.65), 0 0 40px rgba(57, 255, 20, 0.25), inset 0 1px 1px rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.4s ease;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+/* Open Cinematic Stage Spacer (Center card removed, video breathes completely!) */
+.open-cinematic-stage-spacer {
+  width: 100%;
+  height: min(40vh, 320px);
+  pointer-events: none;
 }
 
 .artwork-floating {
@@ -2107,36 +2098,39 @@ button, input {
 }
 
 /* Inside Normal & Reverse Time Badges */
-.waveform-inside-badge {
-  position: absolute;
-  bottom: 7px;
+/* Top Waveform Section Times Header (Left & Right) */
+.waveform-top-time-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 0 4px;
+}
+
+.waveform-time-tag {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: rgba(8, 12, 9, 0.82);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(57, 255, 20, 0.35);
-  border-radius: 6px;
-  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  padding: 3px 12px;
   font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   color: #39FF14;
   letter-spacing: 0.05em;
-  pointer-events: none;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.6), 0 0 8px rgba(57, 255, 20, 0.2);
-  z-index: 10;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4), 0 0 10px rgba(57, 255, 20, 0.2);
 }
 
-.waveform-inside-badge.time-normal {
-  left: 9px;
-}
-
-.waveform-inside-badge.time-reverse {
-  right: 9px;
-  color: rgba(255, 255, 255, 0.88);
-  border-color: rgba(255, 255, 255, 0.18);
+.waveform-time-tag.time-reverse {
+  color: rgba(255, 255, 255, 0.9);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
 }
 
 .inside-badge-dot {
@@ -2177,20 +2171,22 @@ button, input {
 }
 
 /* ==========================================================================
-   FUTURISTIC LIQUID GLASS CONTROL CONSOLE
+   FUTURISTIC LIQUID GLASS CONTROL CONSOLE (Centered & Balanced Layout)
    ========================================================================== */
 .futuristic-control-console {
   display: flex;
   align-items: center;
-  justify-content: space-around;
-  gap: 12px;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 380px;
+  margin: 12px auto 0 auto;
+  width: 100%;
   background: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(28px) saturate(190%);
   -webkit-backdrop-filter: blur(28px) saturate(190%);
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: var(--radius-full);
-  padding: 10px 24px;
-  margin-top: 4px;
+  padding: 10px 32px;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.25), 0 0 25px rgba(57, 255, 20, 0.12);
   position: relative;
 }

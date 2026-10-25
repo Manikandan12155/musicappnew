@@ -353,7 +353,7 @@ export const FullPlayer: React.FC = () => {
                   <ChevronRight size={28} />
                 </button>
 
-                {/* Animated Transform Container for smooth swiping */}
+                {/* Open Cinematic Stage: Center card removed so video shines through completely */}
                 <div
                   className="artwork-swipe-transform"
                   style={{
@@ -362,22 +362,7 @@ export const FullPlayer: React.FC = () => {
                     opacity: 1 - Math.min(0.4, Math.abs(dragOffset) / 300)
                   }}
                 >
-                  {/* Pure Liquid Glass Song Cover Card */}
-                  <div
-                    className={`artwork-glass-card ${isPlaying ? 'artwork-floating' : ''}`}
-                    style={{
-                      boxShadow: isPlaying
-                        ? `0 25px 60px rgba(0, 0, 0, 0.6), 0 0 ${Math.round(35 * beatScale)}px rgba(57, 255, 20, 0.4), inset 0 1px 1px rgba(255, 255, 255, 0.35)`
-                        : '0 20px 50px rgba(0, 0, 0, 0.6), inset 0 1px 1px rgba(255, 255, 255, 0.25)'
-                    }}
-                  >
-                    <img
-                      src={currentSong.coverUrl}
-                      alt={currentSong.title}
-                      className="artwork-image"
-                    />
-                    <div className="artwork-sheen-overlay" />
-                  </div>
+                  <div className="open-cinematic-stage-spacer" />
                 </div>
               </div>
 
@@ -422,8 +407,18 @@ export const FullPlayer: React.FC = () => {
                 isPlaying={isPlaying}
               />
 
-              {/* Futuristic Cyber-Control Capsule with Integrated Smart Volume Alternative */}
-              <div className="futuristic-control-console">
+              {/* Futuristic Liquid Glass Control Console: Centered Play & Balanced Controls */}
+              <div className="futuristic-control-console centered-layout">
+                <button
+                  className={`console-btn sub-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
+                  onClick={toggleRepeat}
+                  title={`Repeat: ${repeatMode}`}
+                  aria-label={`Toggle repeat: ${repeatMode}`}
+                >
+                  {repeatMode === 'one' ? <Repeat1 size={20} /> : <Repeat size={20} />}
+                  {repeatMode !== 'none' && <span className="active-dot" />}
+                </button>
+
                 <button
                   className={`console-btn primary-holo-play ${isPlaying ? 'is-playing' : ''}`}
                   onClick={togglePlay}
@@ -432,29 +427,10 @@ export const FullPlayer: React.FC = () => {
                 >
                   <div className="holo-ripple-ring" />
                   {isPlaying ? (
-                    <Pause size={28} fill="currentColor" />
+                    <Pause size={30} fill="currentColor" />
                   ) : (
-                    <Play size={28} fill="currentColor" style={{ marginLeft: '3px' }} />
+                    <Play size={30} fill="currentColor" style={{ marginLeft: '3px' }} />
                   )}
-                </button>
-
-                <button
-                  className="console-btn step-btn"
-                  onClick={nextSong}
-                  title="Next Track (Swipe Left on Artwork)"
-                  aria-label="Next track"
-                >
-                  <SkipForward size={24} />
-                </button>
-
-                <button
-                  className={`console-btn sub-btn ${repeatMode !== 'none' ? 'active-neon' : ''}`}
-                  onClick={toggleRepeat}
-                  title={`Repeat: ${repeatMode}`}
-                  aria-label={`Toggle repeat: ${repeatMode}`}
-                >
-                  {repeatMode === 'one' ? <Repeat1 size={19} /> : <Repeat size={19} />}
-                  {repeatMode !== 'none' && <span className="active-dot" />}
                 </button>
 
                 {/* Smart Volume Alternative: Compact Trigger with Expandable Neon Popover */}

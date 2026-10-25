@@ -223,7 +223,18 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
 
   return (
     <div className="unified-waveform-wrapper" onClick={(e) => e.stopPropagation()}>
-      {/* Waveform Scrubber Surface with Inside Times */}
+      {/* Top Section Times Header (Left: Elapsed, Right: Remaining) */}
+      <div className="waveform-top-time-row">
+        <div className="waveform-time-tag time-normal">
+          <span className="inside-badge-dot" />
+          <span>{formatTime(currentDisplayTime)}</span>
+        </div>
+        <div className="waveform-time-tag time-reverse">
+          <span>-{formatTime(remainingTime)}</span>
+        </div>
+      </div>
+
+      {/* Waveform Scrubber Surface */}
       <div
         ref={containerRef}
         className={`unified-waveform-track ${isScrubbing ? 'is-scrubbing' : ''}`}
@@ -245,17 +256,6 @@ export const WaveformTimeline: React.FC<WaveformTimelineProps> = ({
       >
         {/* Real-time Frequency + Waveform Canvas */}
         <canvas ref={canvasRef} className="waveform-live-canvas" />
-
-        {/* Normal Elapsed Time Badge INSIDE Left */}
-        <div className="waveform-inside-badge time-normal">
-          <span className="inside-badge-dot" />
-          <span>{formatTime(currentDisplayTime)}</span>
-        </div>
-
-        {/* Reverse Remaining Time Badge INSIDE Right */}
-        <div className="waveform-inside-badge time-reverse">
-          <span>-{formatTime(remainingTime)}</span>
-        </div>
 
         {/* Hover Scrubbing Needle Tooltip */}
         {hoverPercent !== null && !isScrubbing && (
