@@ -26,6 +26,7 @@ import { SyncedLyrics } from './SyncedLyrics';
 import { SongDNA } from './SongDNA';
 import { WaveformTimeline } from './WaveformTimeline';
 import { audioEngine } from '../services/audioEngine';
+import { AnimeCharacter3D } from './AnimeCharacter3D';
 
 export const FullPlayer: React.FC = () => {
   const {
@@ -59,7 +60,7 @@ export const FullPlayer: React.FC = () => {
   const [volume, setVolumeState] = useState<number>(0.85);
   const [isMuted, setIsMuted] = useState<boolean>(false);
   const [isVolOpen, setIsVolOpen] = useState<boolean>(false);
-  const [artViewMode, setArtViewMode] = useState<'vinyl' | 'glass'>('vinyl');
+  const [artViewMode, setArtViewMode] = useState<'anime' | 'vinyl' | 'glass'>('anime');
 
   // Swipeable gesture state for horizontal song navigation
   const [dragOffset, setDragOffset] = useState<number>(0);
@@ -116,7 +117,7 @@ export const FullPlayer: React.FC = () => {
 
   // Swipe gesture handlers
   const handleStagePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    if ((e.target as HTMLElement).closest('button, .art-mode-switch-btn')) return;
+    if ((e.target as HTMLElement).closest('button, .art-mode-switch-btn, .anime-canvas-mount, .anime-character-3d-box')) return;
     touchStartRef.current = { x: e.clientX, y: e.clientY, time: Date.now() };
     setIsDragging(true);
     setSlideTransition('none');
@@ -322,7 +323,9 @@ export const FullPlayer: React.FC = () => {
                     opacity: 1 - Math.min(0.4, Math.abs(dragOffset) / 300)
                   }}
                 >
-                  {artViewMode === 'vinyl' ? (
+                  {artViewMode === 'anime' ? (
+                    <AnimeCharacter3D isPlaying={isPlaying} coverUrl={currentSong.coverUrl} />
+                  ) : artViewMode === 'vinyl' ? (
                     <div className={`vinyl-turntable-box ${isPlaying ? 'active-playing' : 'is-paused'}`}>
                       {/* Beat-Reactive Pulsing Rings in Neon Green */}
                       <div
@@ -380,17 +383,33 @@ export const FullPlayer: React.FC = () => {
                   )}
                 </div>
 
-                {/* Switch between Vinyl Turntable & Glass Card view */}
+                {/* Switch between 3D Anime Vibe, Vinyl Turntable & Glass Card view */}
                 <div className="stage-action-bar">
                   <button
                     className="art-mode-switch-btn"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setArtViewMode((prev) => (prev === 'vinyl' ? 'glass' : 'vinyl'));
+                      setArtViewMode((prev) => {
+                        if (prev === 'anime') return 'vinyl';
+                        if (prev === 'vinyl') return 'glass';
+                        return 'anime';
+                      });
                     }}
-                    title={artViewMode === 'vinyl' ? 'Switch to Glass Cover Art' : 'Switch to Cosmic Vinyl'}
+                    title={
+                      artViewMode === 'anime'
+                        ? 'Switch to Vinyl Turntable'
+                        : artViewMode === 'vinyl'
+                        ? 'Switch to Glass Cover Art'
+                        : 'Switch to 3D Anime Character'
+                    }
                   >
-                    <span>{artViewMode === 'vinyl' ? '📀 Vinyl Turntable' : '🔲 Cover Card'}</span>
+                    <span>
+                      {artViewMode === 'anime'
+                        ? '💃 3D Anime Vibe'
+                        : artViewMode === 'vinyl'
+                        ? '📀 Vinyl Turntable'
+                        : '🔲 Cover Card'}
+                    </span>
                   </button>
                   <span className="swipe-instruction-tag">Swipe left/right to change track</span>
                 </div>
