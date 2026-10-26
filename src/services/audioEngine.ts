@@ -27,6 +27,8 @@ class AudioEngine {
   constructor() {
     this.audio = new Audio();
     this.audio.preload = 'auto';
+    this.audio.setAttribute('playsinline', 'true');
+    this.audio.setAttribute('webkit-playsinline', 'true');
 
     // Hook audio error event to auto-fallback to YouTube
     this.audio.addEventListener('error', () => {
@@ -35,6 +37,14 @@ class AudioEngine {
         this.startYouTubeFallback(this.activeVideoId);
       }
     });
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', () => {
+        if (this.audioCtx && !this.audio.paused && this.audioCtx.state === 'suspended') {
+          this.audioCtx.resume().catch(() => {});
+        }
+      });
+    }
 
     this.initYouTubeIframe();
   }
@@ -48,6 +58,13 @@ class AudioEngine {
     try {
       const AudioCtxClass = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       this.audioCtx = new AudioCtxClass();
+
+      this.audioCtx.onstatechange = () => {
+        if (this.audioCtx && this.audioCtx.state === 'suspended' && !this.audio.paused) {
+          this.audioCtx.resume().catch(() => {});
+        }
+      };
+
       this.sourceNode = this.audioCtx.createMediaElementSource(this.audio);
 
       // Bass boost filter (LowShelf at 80Hz)
@@ -279,9 +296,8 @@ class AudioEngine {
     const vid = videoId && videoId.length === 11 ? videoId : (url && url.includes('/api/stream/') ? url.split('/api/stream/')[1].split('?')[0] : null);
     this.activeVideoId = vid;
 
-    // If running on Vercel (where backend stream doesn't exist), directly use YouTube fallback
-    const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
-    if (isVercel && vid && (!url || !url.startsWith('blob:'))) {
+    // If no direct audio URL is provided but videoId exists, use YouTube fallback
+    if (!url && vid) {
       this.startYouTubeFallback(vid, startTime);
       return;
     }

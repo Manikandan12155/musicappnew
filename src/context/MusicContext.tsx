@@ -245,6 +245,16 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       const dur = audioEngine.getDuration();
       if (dur && !isNaN(dur) && dur > 0) {
         setDuration(prev => (prev === dur ? prev : dur));
+
+        if ('mediaSession' in navigator && 'setPositionState' in navigator.mediaSession) {
+          try {
+            navigator.mediaSession.setPositionState({
+              duration: dur,
+              playbackRate: 1.0,
+              position: Math.min(cur, dur)
+            });
+          } catch {}
+        }
       }
 
       if (currentSong?.lyrics && currentSong.lyrics.length > 0) {
@@ -437,6 +447,72 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     audioEngine.seek(seconds);
     setCurrentTime(seconds);
   };
+
+  // MediaSession API Integration for Chrome/Android Background & Lockscreen Playback
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator) || !currentSong) return;
+
+    try {
+      const artwork = currentSong.coverUrl
+        ? [
+            { src: currentSong.coverUrl, sizes: '96x96', type: 'image/jpeg' },
+            { src: currentSong.coverUrl, sizes: '128x128', type: 'image/jpeg' },
+            { src: currentSong.coverUrl, sizes: '192x192', type: 'image/jpeg' },
+            { src: currentSong.coverUrl, sizes: '256x256', type: 'image/jpeg' },
+            { src: currentSong.coverUrl, sizes: '384x384', type: 'image/jpeg' },
+            { src: currentSong.coverUrl, sizes: '512x512', type: 'image/jpeg' }
+          ]
+        : [];
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentSong.title,
+        artist: currentSong.artist,
+        album: currentSong.album || 'Space Music',
+        artwork
+      });
+    } catch (e) {
+      console.warn('MediaSession metadata note:', e);
+    }
+  }, [currentSong]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+    navigator.mediaSession.playbackState = isPlaying ? 'playing' : 'paused';
+  }, [isPlaying]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('mediaSession' in navigator)) return;
+
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        togglePlay();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevSong();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        handleNextSong();
+      });
+      navigator.mediaSession.setActionHandler('seekto', (details) => {
+        if (details.seekTime !== undefined) {
+          seekTo(details.seekTime);
+        }
+      });
+      navigator.mediaSession.setActionHandler('seekbackward', (details) => {
+        const offset = details.seekOffset || 10;
+        seekTo(Math.max(0, audioEngine.getCurrentTime() - offset));
+      });
+      navigator.mediaSession.setActionHandler('seekforward', (details) => {
+        const offset = details.seekOffset || 10;
+        seekTo(Math.min(audioEngine.getDuration(), audioEngine.getCurrentTime() + offset));
+      });
+    } catch (e) {
+      console.warn('MediaSession handler note:', e);
+    }
+  }, [currentSong, isPlaying, queue, queueIndex]);
 
   const toggleLikeSong = (id: string) => {
     if (!id) return;
