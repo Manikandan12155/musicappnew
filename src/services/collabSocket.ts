@@ -4,6 +4,7 @@ export interface RoomMember {
   id: string;
   name: string;
   isHost: boolean;
+  isOnline?: boolean;
 }
 
 export interface CollabRoomState {
@@ -16,6 +17,7 @@ export interface CollabRoomState {
   isPlaying: boolean;
   currentTime: number;
   queue: Song[];
+  timestamp?: number;
 }
 
 export interface PlaybackSyncPayload {
@@ -23,11 +25,13 @@ export interface PlaybackSyncPayload {
   isPlaying: boolean;
   currentTime: number;
   senderName: string;
+  timestamp?: number;
 }
 
 export interface SeekSyncPayload {
   currentTime: number;
   senderName: string;
+  timestamp?: number;
 }
 
 export interface ReactionPayload {
@@ -35,6 +39,13 @@ export interface ReactionPayload {
   emoji: string;
   senderName: string;
   timestamp: number;
+}
+
+export interface JamSession {
+  roomCode: string;
+  userName: string;
+  userId: string;
+  isHost: boolean;
 }
 
 type MessageHandler = (data: any) => void;
@@ -46,16 +57,73 @@ class CollabSocketService {
   private listeners: Map<string, Set<MessageHandler>> = new Map();
   private pendingQueue: Array<{ type: string; payload: Record<string, any> }> = [];
   private urlIndex = 0;
+  private lastSubmittedName = '';
 
-  public myUserId: string | null = null;
+  public myUserId: string;
   public currentRoomCode: string | null = null;
 
   constructor() {
+    let savedUid = '';
+    try {
+      savedUid = localStorage.getItem('space_collab_userid') || '';
+      if (!savedUid) {
+        savedUid = Math.random().toString(36).substring(2, 9);
+        localStorage.setItem('space_collab_userid', savedUid);
+      }
+    } catch {
+      savedUid = Math.random().toString(36).substring(2, 9);
+    }
+    this.myUserId = savedUid;
+
+    const existingSession = this.getActiveSession();
+    if (existingSession) {
+      this.currentRoomCode = existingSession.roomCode;
+      this.lastSubmittedName = existingSession.userName;
+    }
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('online', () => {
+        this.connect(true);
+      });
+      window.addEventListener('focus', () => {
+        if (!this.isConnected) {
+          this.connect();
+        }
+      });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && !this.isConnected) {
+          this.connect();
+        }
+      });
+    }
+
     this.connect();
   }
 
   public get isConnected(): boolean {
     return Boolean(this.ws && this.ws.readyState === WebSocket.OPEN);
+  }
+
+  public getActiveSession(): JamSession | null {
+    try {
+      const data = localStorage.getItem('space_jam_session');
+      if (data) return JSON.parse(data);
+    } catch {}
+    return null;
+  }
+
+  public saveActiveSession(session: JamSession) {
+    try {
+      localStorage.setItem('space_jam_session', JSON.stringify(session));
+      this.currentRoomCode = session.roomCode;
+    } catch {}
+  }
+
+  public clearActiveSession() {
+    try {
+      localStorage.removeItem('space_jam_session');
+      this.currentRoomCode = null;
+    } catch {}
   }
 
   private getCandidateUrls(): string[] {
@@ -96,9 +164,16 @@ class CollabSocketService {
     return urls;
   }
 
-  public connect() {
-    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+  public connect(force = false) {
+    if (!force && this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
       return;
+    }
+
+    if (force && this.ws) {
+      try {
+        this.ws.close();
+      } catch {}
+      this.ws = null;
     }
 
     try {
@@ -112,6 +187,17 @@ class CollabSocketService {
         if (this.reconnectTimer) {
           clearTimeout(this.reconnectTimer);
           this.reconnectTimer = null;
+        }
+
+        // Auto-rejoin if active room session exists in localStorage
+        const activeSess = this.getActiveSession();
+        if (activeSess && activeSess.roomCode) {
+          this.send('REJOIN_ROOM', {
+            code: activeSess.roomCode,
+            name: activeSess.userName,
+            userId: this.myUserId,
+            isHost: activeSess.isHost
+          });
         }
 
         // Flush any pending messages queued while connecting
@@ -164,14 +250,26 @@ class CollabSocketService {
   private handleServerMessage(data: any) {
     switch (data.type) {
       case 'ROOM_CREATED':
-        this.myUserId = data.userId;
+        this.myUserId = data.userId || this.myUserId;
         this.currentRoomCode = data.roomCode;
+        this.saveActiveSession({
+          roomCode: data.roomCode,
+          userName: data.userName || this.lastSubmittedName,
+          userId: this.myUserId,
+          isHost: true
+        });
         this.emit('room_created', data);
         break;
 
       case 'ROOM_JOINED':
-        this.myUserId = data.userId;
+        this.myUserId = data.userId || this.myUserId;
         this.currentRoomCode = data.roomCode;
+        this.saveActiveSession({
+          roomCode: data.roomCode,
+          userName: data.userName || this.lastSubmittedName,
+          userId: this.myUserId,
+          isHost: Boolean(data.isHost)
+        });
         this.emit('room_joined', data);
         break;
 
@@ -197,6 +295,9 @@ class CollabSocketService {
         break;
 
       case 'ERROR':
+        if (typeof data.message === 'string' && (data.message.includes('not found') || data.message.includes('expired'))) {
+          this.clearActiveSession();
+        }
         this.emit('error', data.message || 'Unknown room error');
         break;
 
@@ -206,18 +307,24 @@ class CollabSocketService {
   }
 
   public send(type: string, payload: Record<string, any> = {}) {
+    const fullPayload = {
+      userId: this.myUserId,
+      ...payload
+    };
+
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      // Queue message to send as soon as connected
-      this.pendingQueue.push({ type, payload });
+      this.pendingQueue.push({ type, payload: fullPayload });
       this.connect();
       return;
     }
-    this.ws.send(JSON.stringify({ type, ...payload }));
+    this.ws.send(JSON.stringify({ type, ...fullPayload }));
   }
 
   public createRoom(userName: string, currentSong?: Song | null, isPlaying?: boolean, currentTime?: number, queue?: Song[]) {
+    this.lastSubmittedName = userName;
     this.send('CREATE_ROOM', {
       name: userName,
+      userId: this.myUserId,
       currentSong,
       isPlaying: Boolean(isPlaying),
       currentTime: Number(currentTime) || 0,
@@ -226,9 +333,11 @@ class CollabSocketService {
   }
 
   public joinRoom(roomCode: string, userName: string) {
+    this.lastSubmittedName = userName;
     this.send('JOIN_ROOM', {
       code: roomCode.trim().toUpperCase(),
-      name: userName
+      name: userName,
+      userId: this.myUserId
     });
   }
 
@@ -236,13 +345,13 @@ class CollabSocketService {
     this.send('SYNC_PLAY', {
       currentSong,
       isPlaying,
-      currentTime,
+      currentTime: Number(currentTime) || 0,
       queue
     });
   }
 
   public syncSeek(currentTime: number) {
-    this.send('SYNC_SEEK', { currentTime });
+    this.send('SYNC_SEEK', { currentTime: Number(currentTime) || 0 });
   }
 
   public addQueue(song: Song) {
@@ -254,7 +363,8 @@ class CollabSocketService {
   }
 
   public leaveRoom() {
-    this.send('LEAVE_ROOM', {});
+    this.send('LEAVE_ROOM', { userId: this.myUserId });
+    this.clearActiveSession();
     this.currentRoomCode = null;
   }
 

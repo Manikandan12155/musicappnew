@@ -29,8 +29,9 @@ interface MusicContextType {
   currentLyricIndex: number;
   isLoadingTrending: boolean;
   isLoadingMore: boolean;
+  hasMoreTrending: boolean;
   // Actions
-  playSong: (song: Song, customQueue?: Song[]) => void;
+  playSong: (song: Song, customQueue?: Song[], startTime?: number) => void;
   togglePlay: () => void;
   nextSong: () => void;
   prevSong: () => void;
@@ -322,21 +323,22 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }
   };
 
-  const playSong = async (song: Song, customQueue?: Song[]) => {
+  const playSong = async (song: Song, customQueue?: Song[], startTime?: number) => {
     if (!song) return;
     setCurrentSong(song);
     const newQueue = customQueue && customQueue.length > 0 ? customQueue : (queue.length > 0 ? queue : [song]);
     setQueue(newQueue);
     const idx = newQueue.findIndex((s) => s.id === song.id);
     setQueueIndex(idx !== -1 ? idx : 0);
-    setCurrentTime(0);
+    const initialTime = startTime && startTime > 0 ? startTime : 0;
+    setCurrentTime(initialTime);
     setDuration(song.duration || 0);
 
     fetchLyricsForSong(song);
 
     try {
       const finalAudioUrl = song.audioUrl.startsWith('/api') ? apiUrl(song.audioUrl) : song.audioUrl;
-      await audioEngine.play(finalAudioUrl, song.id, song.duration);
+      await audioEngine.play(finalAudioUrl, song.id, song.duration, initialTime);
       setIsPlaying(true);
     } catch (e) {
       console.warn('Playback error or user gesture required:', e);
@@ -533,6 +535,7 @@ export const MusicProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         addSongToPlaylist,
         refreshTrending,
         isLoadingMore,
+        hasMoreTrending,
         loadMoreSongs,
         addToQueue,
         playNext,

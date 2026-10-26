@@ -212,14 +212,21 @@ class AudioEngine {
     }
   }
 
-  private startYouTubeFallback(videoId: string) {
+  private startYouTubeFallback(videoId: string, startTime?: number) {
     this.isYtActive = true;
     this.activeVideoId = videoId;
     this.audio.pause();
 
     if (this.isYtReady && this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
       try {
-        this.ytPlayer.loadVideoById(videoId);
+        if (startTime !== undefined && startTime > 0) {
+          this.ytPlayer.loadVideoById({
+            videoId,
+            startSeconds: startTime
+          });
+        } else {
+          this.ytPlayer.loadVideoById(videoId);
+        }
         this.ytPlayer.playVideo();
       } catch (e) {
         console.warn('Failed to start YT fallback:', e);
@@ -253,7 +260,7 @@ class AudioEngine {
     }
   }
 
-  public async play(url?: string, videoId?: string, knownDuration?: number): Promise<void> {
+  public async play(url?: string, videoId?: string, knownDuration?: number, startTime?: number): Promise<void> {
     if (knownDuration && knownDuration > 0) {
       this.currentYtDuration = knownDuration;
     }
@@ -275,7 +282,7 @@ class AudioEngine {
     // If running on Vercel (where backend stream doesn't exist), directly use YouTube fallback
     const isVercel = typeof window !== 'undefined' && window.location.hostname.includes('vercel.app');
     if (isVercel && vid && (!url || !url.startsWith('blob:'))) {
-      this.startYouTubeFallback(vid);
+      this.startYouTubeFallback(vid, startTime);
       return;
     }
 
@@ -302,13 +309,27 @@ class AudioEngine {
       }
     }
 
+    if (startTime !== undefined && startTime > 0) {
+      const applyStartTime = () => {
+        try {
+          this.audio.currentTime = startTime;
+        } catch {}
+      };
+      if (this.audio.readyState >= 1) {
+        applyStartTime();
+      } else {
+        this.audio.addEventListener('loadedmetadata', applyStartTime, { once: true });
+        this.audio.addEventListener('canplay', applyStartTime, { once: true });
+      }
+    }
+
     try {
       await this.audio.play();
     } catch (err) {
       // If audio.play() fails and we have a video ID, trigger YouTube fallback!
       if (vid) {
         console.warn('HTML5 audio play rejected, activating YouTube player fallback:', err);
-        this.startYouTubeFallback(vid);
+        this.startYouTubeFallback(vid, startTime);
       } else {
         throw err;
       }
@@ -359,7 +380,7 @@ class AudioEngine {
   public getFrequencyData(): Uint8Array {
     if (this.analyserNode) {
       try {
-        this.analyserNode.getByteFrequencyData(this.freqBuffer);
+        this.analyserNode.getByteFrequencyData(this.freqBuffer as any);
         let sum = 0;
         for (let i = 0; i < this.freqBuffer.length; i++) sum += this.freqBuffer[i];
         if (sum > 0) return this.freqBuffer;

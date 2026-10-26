@@ -591,8 +591,10 @@ app.get('/api/lyrics', async (req: Request, res: Response) => {
 interface RoomMember {
   id: string;
   name: string;
-  ws: WebSocket;
+  ws: WebSocket | null;
   isHost: boolean;
+  isOnline: boolean;
+  disconnectTimer?: NodeJS.Timeout | null;
 }
 
 interface RoomState {
@@ -605,6 +607,7 @@ interface RoomState {
   currentTime: number;
   updatedAt: number;
   queue: any[];
+  roomExpireTimer?: NodeJS.Timeout | null;
 }
 
 const rooms = new Map<string, RoomState>();
@@ -614,7 +617,7 @@ function broadcastToRoom(roomCode: string, payload: any, senderWs?: WebSocket) {
   if (!room) return;
   const msg = JSON.stringify(payload);
   room.members.forEach((m) => {
-    if (m.ws !== senderWs && m.ws.readyState === WebSocket.OPEN) {
+    if (m.ws && m.ws !== senderWs && m.ws.readyState === WebSocket.OPEN) {
       m.ws.send(msg);
     }
   });
@@ -626,8 +629,18 @@ function broadcastRoomUpdate(roomCode: string) {
   const membersList = Array.from(room.members.values()).map((m) => ({
     id: m.id,
     name: m.name,
-    isHost: m.isHost
+    isHost: m.isHost,
+    isOnline: m.isOnline
   }));
+
+  // Compute accurate elapsed current time if song is playing
+  let currentEstTime = Number(room.currentTime) || 0;
+  if (room.isPlaying && room.updatedAt) {
+    const elapsed = (Date.now() - room.updatedAt) / 1000;
+    if (elapsed > 0 && elapsed < 3600) {
+      currentEstTime += elapsed;
+    }
+  }
 
   const payload = {
     type: 'ROOM_UPDATE',
@@ -639,14 +652,15 @@ function broadcastRoomUpdate(roomCode: string) {
       members: membersList,
       currentSong: room.currentSong,
       isPlaying: room.isPlaying,
-      currentTime: room.currentTime,
-      queue: room.queue
+      currentTime: currentEstTime,
+      queue: room.queue,
+      timestamp: Date.now()
     }
   };
 
   const msg = JSON.stringify(payload);
   room.members.forEach((m) => {
-    if (m.ws.readyState === WebSocket.OPEN) {
+    if (m.ws && m.ws.readyState === WebSocket.OPEN) {
       m.ws.send(msg);
     }
   });
@@ -660,6 +674,10 @@ wss.on('connection', (ws: WebSocket) => {
   ws.on('message', (raw) => {
     try {
       const data = JSON.parse(raw.toString());
+
+      if (data.userId) {
+        userId = String(data.userId).trim();
+      }
 
       if (data.type === 'CREATE_ROOM') {
         const code = Math.random().toString(36).substring(2, 6).toUpperCase();
@@ -676,7 +694,7 @@ wss.on('connection', (ws: WebSocket) => {
           queue: data.queue || []
         };
 
-        room.members.set(userId, { id: userId, name: userName, ws, isHost: true });
+        room.members.set(userId, { id: userId, name: userName, ws, isHost: true, isOnline: true });
         rooms.set(code, room);
         userRoomCode = code;
 
@@ -684,10 +702,11 @@ wss.on('connection', (ws: WebSocket) => {
           type: 'ROOM_CREATED',
           roomCode: code,
           userId,
+          userName,
           isHost: true
         }));
         broadcastRoomUpdate(code);
-      } else if (data.type === 'JOIN_ROOM') {
+      } else if (data.type === 'JOIN_ROOM' || data.type === 'REJOIN_ROOM') {
         const code = (data.code || '').trim().toUpperCase();
         userName = (data.name || 'Guest Listener').trim();
         const room = rooms.get(code);
@@ -697,14 +716,43 @@ wss.on('connection', (ws: WebSocket) => {
           return;
         }
 
-        room.members.set(userId, { id: userId, name: userName, ws, isHost: false });
-        userRoomCode = code;
+        if (room.roomExpireTimer) {
+          clearTimeout(room.roomExpireTimer);
+          room.roomExpireTimer = null;
+        }
+
+        let member = room.members.get(userId);
+        if (member) {
+          if (member.disconnectTimer) {
+            clearTimeout(member.disconnectTimer);
+            member.disconnectTimer = null;
+          }
+          member.ws = ws;
+          member.name = userName || member.name;
+          member.isOnline = true;
+          userRoomCode = code;
+        } else {
+          const isHostReq = Boolean(data.isHost && (room.hostId === userId || room.members.size === 0));
+          member = {
+            id: userId,
+            name: userName,
+            ws,
+            isHost: isHostReq,
+            isOnline: true
+          };
+          if (isHostReq) {
+            room.hostId = userId;
+          }
+          room.members.set(userId, member);
+          userRoomCode = code;
+        }
 
         ws.send(JSON.stringify({
           type: 'ROOM_JOINED',
           roomCode: code,
           userId,
-          isHost: false
+          userName: member.name,
+          isHost: member.isHost
         }));
         broadcastRoomUpdate(code);
       } else if (data.type === 'SYNC_PLAY') {
@@ -713,8 +761,8 @@ wss.on('connection', (ws: WebSocket) => {
         if (!room) return;
 
         if (data.currentSong !== undefined) room.currentSong = data.currentSong;
-        if (data.isPlaying !== undefined) room.isPlaying = data.isPlaying;
-        if (data.currentTime !== undefined) room.currentTime = data.currentTime;
+        if (data.isPlaying !== undefined) room.isPlaying = Boolean(data.isPlaying);
+        if (data.currentTime !== undefined) room.currentTime = Number(data.currentTime) || 0;
         if (data.queue !== undefined) room.queue = data.queue;
         room.updatedAt = Date.now();
 
@@ -723,20 +771,22 @@ wss.on('connection', (ws: WebSocket) => {
           currentSong: room.currentSong,
           isPlaying: room.isPlaying,
           currentTime: room.currentTime,
-          senderName: userName
+          senderName: userName,
+          timestamp: Date.now()
         }, ws);
       } else if (data.type === 'SYNC_SEEK') {
         if (!userRoomCode) return;
         const room = rooms.get(userRoomCode);
         if (!room) return;
 
-        room.currentTime = data.currentTime;
+        room.currentTime = Number(data.currentTime) || 0;
         room.updatedAt = Date.now();
 
         broadcastToRoom(userRoomCode, {
           type: 'SEEK_SYNC',
-          currentTime: data.currentTime,
-          senderName: userName
+          currentTime: room.currentTime,
+          senderName: userName,
+          timestamp: Date.now()
         }, ws);
       } else if (data.type === 'ADD_QUEUE') {
         if (!userRoomCode) return;
@@ -756,12 +806,16 @@ wss.on('connection', (ws: WebSocket) => {
         if (userRoomCode) {
           const room = rooms.get(userRoomCode);
           if (room) {
+            const member = room.members.get(userId);
+            if (member?.disconnectTimer) {
+              clearTimeout(member.disconnectTimer);
+            }
             room.members.delete(userId);
             if (room.members.size === 0) {
               rooms.delete(userRoomCode);
             } else {
               if (room.hostId === userId) {
-                const nextHost = Array.from(room.members.values())[0];
+                const nextHost = Array.from(room.members.values()).find(m => m.isOnline) || Array.from(room.members.values())[0];
                 if (nextHost) {
                   nextHost.isHost = true;
                   room.hostId = nextHost.id;
@@ -782,17 +836,41 @@ wss.on('connection', (ws: WebSocket) => {
     if (userRoomCode) {
       const room = rooms.get(userRoomCode);
       if (room) {
-        room.members.delete(userId);
-        if (room.members.size === 0) {
-          rooms.delete(userRoomCode);
-        } else {
-          if (room.hostId === userId) {
-            const nextHost = Array.from(room.members.values())[0];
-            if (nextHost) {
-              nextHost.isHost = true;
-              room.hostId = nextHost.id;
-            }
+        const member = room.members.get(userId);
+        if (member) {
+          member.ws = null;
+          member.isOnline = false;
+          if (member.disconnectTimer) {
+            clearTimeout(member.disconnectTimer);
           }
+
+          // Allow 45-second reconnect window for page refresh or network switch
+          const capturedRoomCode = userRoomCode;
+          const capturedUserId = userId;
+          member.disconnectTimer = setTimeout(() => {
+            const curRoom = rooms.get(capturedRoomCode);
+            if (!curRoom) return;
+            curRoom.members.delete(capturedUserId);
+
+            const activeMembers = Array.from(curRoom.members.values()).filter(m => m.isOnline);
+            if (curRoom.members.size === 0 || activeMembers.length === 0) {
+              if (!curRoom.roomExpireTimer) {
+                curRoom.roomExpireTimer = setTimeout(() => {
+                  rooms.delete(capturedRoomCode);
+                }, 60000);
+              }
+            } else {
+              if (curRoom.hostId === capturedUserId) {
+                const nextHost = activeMembers[0] || Array.from(curRoom.members.values())[0];
+                if (nextHost) {
+                  nextHost.isHost = true;
+                  curRoom.hostId = nextHost.id;
+                }
+              }
+              broadcastRoomUpdate(capturedRoomCode);
+            }
+          }, 45000);
+
           broadcastRoomUpdate(userRoomCode);
         }
       }
