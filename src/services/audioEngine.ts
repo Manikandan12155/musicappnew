@@ -1,8 +1,41 @@
 // Dual-Engine Audio Player for Space Music
 // Primary: High-Res HTML5 Stream Pipe
-// Fallback: Client-Side YouTube Player (Zero IP Blocks on Vercel / Cloud)
+// Fallback: Client-Side YouTube Player with Chrome/Android Background Audio Anchor
 
 import { EqualizerSettings } from '../types/music';
+
+// In-memory silent audio WAV generator:
+// Keeps Chrome's media session, lock screen controls, and background playback alive
+let cachedSilentBlobUrl: string | null = null;
+function getSilentAudioUrl(): string {
+  if (cachedSilentBlobUrl) return cachedSilentBlobUrl;
+  try {
+    const sampleRate = 8000;
+    const numSamples = 8000; // 1 second silent PCM WAV
+    const buffer = new ArrayBuffer(44 + numSamples * 2);
+    const view = new DataView(buffer);
+    const writeString = (offset: number, str: string) => {
+      for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+    };
+    writeString(0, 'RIFF');
+    view.setUint32(4, 36 + numSamples * 2, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true); // PCM format
+    view.setUint16(22, 1, true); // Mono
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * 2, true);
+    view.setUint16(32, 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, numSamples * 2, true);
+    cachedSilentBlobUrl = URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
+    return cachedSilentBlobUrl;
+  } catch {
+    return 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+  }
+}
 
 class AudioEngine {
   private audio: HTMLAudioElement;
@@ -14,6 +47,10 @@ class AudioEngine {
   private analyserNode: AnalyserNode | null = null;
   private freqBuffer: Uint8Array = new Uint8Array(32);
   private isInitialized = false;
+
+  // Background playback & user intent tracker
+  private isUserPaused = true;
+  private isSilentAudioRunning = false;
 
   // YouTube fallback engine
   private ytPlayer: any = null;
@@ -29,6 +66,7 @@ class AudioEngine {
     this.audio.preload = 'auto';
     this.audio.setAttribute('playsinline', 'true');
     this.audio.setAttribute('webkit-playsinline', 'true');
+    this.audio.setAttribute('x-webkit-airplay', 'allow');
 
     // Hook audio error event to auto-fallback to YouTube
     this.audio.addEventListener('error', () => {
@@ -39,14 +77,50 @@ class AudioEngine {
     });
 
     if (typeof document !== 'undefined') {
-      document.addEventListener('visibilitychange', () => {
-        if (this.audioCtx && !this.audio.paused && this.audioCtx.state === 'suspended') {
-          this.audioCtx.resume().catch(() => {});
+      const handleBackgroundResume = () => {
+        if (!this.isUserPaused) {
+          if (this.audioCtx && this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume().catch(() => {});
+          }
+          if (this.isYtActive) {
+            this.startSilentAudioAnchor();
+            if (this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+              this.ytPlayer.playVideo();
+            }
+          } else if (this.audio.paused) {
+            this.audio.play().catch(() => {});
+          }
         }
-      });
+      };
+
+      document.addEventListener('visibilitychange', handleBackgroundResume);
+      window.addEventListener('blur', handleBackgroundResume);
+      window.addEventListener('pagehide', handleBackgroundResume);
     }
 
     this.initYouTubeIframe();
+  }
+
+  private startSilentAudioAnchor() {
+    try {
+      const silentUrl = getSilentAudioUrl();
+      if (this.audio.src !== silentUrl) {
+        this.audio.src = silentUrl;
+        this.audio.loop = true;
+      }
+      this.audio.play().then(() => {
+        this.isSilentAudioRunning = true;
+      }).catch(() => {});
+    } catch {}
+  }
+
+  private stopSilentAudioAnchor() {
+    this.isSilentAudioRunning = false;
+    try {
+      if (this.audio.src && this.audio.src.startsWith('blob:')) {
+        this.audio.pause();
+      }
+    } catch {}
   }
 
   public getAudioElement(): HTMLAudioElement {
@@ -179,27 +253,43 @@ class AudioEngine {
           disablekb: 1,
           fs: 0,
           playsinline: 1,
+          enablejsapi: 1,
+          origin: typeof window !== 'undefined' ? window.location.origin : '',
           rel: 0
         },
         events: {
           onReady: () => {
             this.isYtReady = true;
-            if (this.isYtActive && this.activeVideoId) {
+            if (this.isYtActive && this.activeVideoId && !this.isUserPaused) {
               this.ytPlayer.loadVideoById(this.activeVideoId);
               this.ytPlayer.playVideo();
+              this.startSilentAudioAnchor();
             }
           },
           onStateChange: (event: any) => {
             // PLAYING = 1, PAUSED = 2, ENDED = 0
             if (event.data === 1) {
+              this.isUserPaused = false;
+              this.startSilentAudioAnchor();
               this.startYtTicker();
               this.audio.dispatchEvent(new Event('play'));
               this.audio.dispatchEvent(new Event('loadedmetadata'));
             } else if (event.data === 2) {
+              // If user DID NOT pause (e.g. Chrome / YouTube paused when switching apps/locking screen)
+              if (!this.isUserPaused && this.isYtActive) {
+                this.startSilentAudioAnchor();
+                setTimeout(() => {
+                  if (!this.isUserPaused && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
+                    this.ytPlayer.playVideo();
+                  }
+                }, 50);
+                return; // Suppress pause event so UI & MediaSession remain active!
+              }
               this.stopYtTicker();
               this.audio.dispatchEvent(new Event('pause'));
             } else if (event.data === 0) {
               this.stopYtTicker();
+              this.stopSilentAudioAnchor();
               this.audio.dispatchEvent(new Event('ended'));
             }
           }
@@ -232,7 +322,8 @@ class AudioEngine {
   private startYouTubeFallback(videoId: string, startTime?: number) {
     this.isYtActive = true;
     this.activeVideoId = videoId;
-    this.audio.pause();
+    this.isUserPaused = false;
+    this.startSilentAudioAnchor();
 
     if (this.isYtReady && this.ytPlayer && typeof this.ytPlayer.loadVideoById === 'function') {
       try {
@@ -278,6 +369,7 @@ class AudioEngine {
   }
 
   public async play(url?: string, videoId?: string, knownDuration?: number, startTime?: number): Promise<void> {
+    this.isUserPaused = false;
     if (knownDuration && knownDuration > 0) {
       this.currentYtDuration = knownDuration;
     }
@@ -285,10 +377,12 @@ class AudioEngine {
     if (!url && !videoId) {
       if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.playVideo === 'function') {
         this.ytPlayer.playVideo();
+        this.startSilentAudioAnchor();
         this.startYtTicker();
         this.audio.dispatchEvent(new Event('play'));
         return;
       }
+      this.stopSilentAudioAnchor();
       return this.audio.play();
     }
 
@@ -305,6 +399,7 @@ class AudioEngine {
     // Otherwise, use native HTML5 Audio stream
     this.isYtActive = false;
     this.stopYtTicker();
+    this.stopSilentAudioAnchor();
     if (this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
       try { this.ytPlayer.pauseVideo(); } catch {}
     }
@@ -353,6 +448,8 @@ class AudioEngine {
   }
 
   public pause(): void {
+    this.isUserPaused = true;
+    this.stopSilentAudioAnchor();
     if (this.isYtActive && this.ytPlayer && typeof this.ytPlayer.pauseVideo === 'function') {
       this.ytPlayer.pauseVideo();
       this.stopYtTicker();
@@ -403,7 +500,7 @@ class AudioEngine {
       } catch {}
     }
 
-    const isPlaying = !this.audio.paused || this.isYtActive;
+    const isPlaying = this.isYtActive ? !this.isUserPaused : (!this.audio.paused && !this.isSilentAudioRunning);
     if (!isPlaying) {
       this.freqBuffer.fill(0);
       return this.freqBuffer;
@@ -421,7 +518,7 @@ class AudioEngine {
   }
 
   public getAudioMetrics(): { bass: number; mid: number; treble: number; energy: number; isPlaying: boolean } {
-    const isPlaying = !this.audio.paused || this.isYtActive;
+    const isPlaying = this.isYtActive ? !this.isUserPaused : (!this.audio.paused && !this.isSilentAudioRunning);
     if (!isPlaying) {
       return { bass: 0, mid: 0, treble: 0, energy: 0, isPlaying: false };
     }
